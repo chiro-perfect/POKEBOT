@@ -1,0 +1,669 @@
+{
+    "259337846882566144": {
+        "deck": [
+            {
+                "name_en": "Zacian",
+                "name_fr": "Zacian",
+                "id": 888,
+                "bst": 660,
+                "rarity_level": "Légendaire",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/888.png",
+                "is_shiny": false,
+                "types": "Fairy",
+                "stats": "- Hp: 92\n- Attack: 120\n- Defense: 115\n- Special-attack: 80\n- Special-defense: 115\n- Speed: 138",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/467/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759698025.982059,
+                "moves": [],
+                "stats_dict": {
+                    "attack": 120,
+                    "defense": 115,
+                    "special-attack": 80,
+                    "special-defense": 115,
+                    "speed": 138
+                }
+            },
+            {
+                "name_en": "Anorith",
+                "name_fr": "Anorith",
+                "id": 347,
+                "bst": 355,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/347.png",
+                "is_shiny": false,
+                "types": "Rock, Bug",
+                "stats": "- Hp: 45\n- Attack: 95\n- Defense: 50\n- Special-attack: 40\n- Special-defense: 50\n- Speed: 75",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/177/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759698027.1021686,
+                "moves": []
+            },
+            {
+                "name_en": "Ferrothorn",
+                "name_fr": "Noacier",
+                "id": 598,
+                "bst": 489,
+                "rarity_level": "Rare",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/598.png",
+                "is_shiny": false,
+                "types": "Grass, Steel",
+                "stats": "- Hp: 74\n- Attack: 94\n- Defense: 131\n- Special-attack: 54\n- Special-defense: 116\n- Speed: 20",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/304/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759698027.1695101,
+                "moves": []
+            },
+            {
+                "name_en": "Mantyke",
+                "name_fr": "Babimanta",
+                "id": 458,
+                "bst": 345,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/458.png",
+                "is_shiny": false,
+                "types": "Water, Flying",
+                "stats": "- Hp: 45\n- Attack: 20\n- Defense: 50\n- Special-attack: 60\n- Special-defense: 120\n- Speed: 50",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/116/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759698027.614818,
+                "moves": []
+            },
+            {
+                "name_en": "Smeargle",
+                "name_fr": "Queulorior",
+                "id": 235,
+                "bst": 250,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/235.png",
+                "is_shiny": false,
+                "types": "Normal",
+                "stats": "- Hp: 55\n- Attack: 20\n- Defense: 35\n- Special-attack: 20\n- Special-defense: 45\n- Speed: 75",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/121/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759698028.1412597,
+                "moves": []
+            },
+            {
+                "name_en": "Gulpin",
+                "name_fr": "Gloupti",
+                "id": 316,
+                "bst": 302,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/316.png",
+                "is_shiny": false,
+                "types": "Poison",
+                "stats": "- Hp: 70\n- Attack: 43\n- Defense: 53\n- Special-attack: 43\n- Special-defense: 53\n- Speed: 40",
+                "moves": [
+                    {
+                        "name": "Larcin",
+                        "power": 60
+                    },
+                    {
+                        "name": "Destruction",
+                        "power": 200
+                    },
+                    {
+                        "name": "Poing Glace",
+                        "power": 75
+                    },
+                    {
+                        "name": "Vibraqua",
+                        "power": 60
+                    }
+                ],
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/159/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759700380.1972609,
+                "generation": 111
+            }
+        ],
+        "last_bigdeck": 1759697542.2776694,
+        "best_card": {
+            "name_en": "Zacian",
+            "name_fr": "Zacian",
+            "id": 888,
+            "bst": 660,
+            "rarity_level": "Légendaire",
+            "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/888.png",
+            "is_shiny": false,
+            "types": "Fairy",
+            "stats": "- Hp: 92\n- Attack: 120\n- Defense: 115\n- Special-attack: 80\n- Special-defense: 115\n- Speed: 138",
+            "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/467/",
+            "evolution_stage": 0,
+            "evolution_limit": 2,
+            "last_evolution": 0,
+            "last_draw": 1759698025.982059,
+            "moves": []
+        }
+    },
+    "505394485656813579": {
+        "deck": [
+            {
+                "name_en": "Budew",
+                "name_fr": "Rozbouton",
+                "id": 406,
+                "bst": 280,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/406.png",
+                "is_shiny": false,
+                "types": "Grass, Poison",
+                "stats": "- Hp: 40\n- Attack: 30\n- Defense: 35\n- Special-attack: 50\n- Special-defense: 70\n- Speed: 55",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/158/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759698270.6713047,
+                "moves": []
+            },
+            {
+                "name_en": "Budew",
+                "name_fr": "Rozbouton",
+                "id": 406,
+                "bst": 280,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/406.png",
+                "is_shiny": false,
+                "types": "Grass, Poison",
+                "stats": "- Hp: 40\n- Attack: 30\n- Defense: 35\n- Special-attack: 50\n- Special-defense: 70\n- Speed: 55",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/158/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759698272.055234,
+                "moves": []
+            },
+            {
+                "name_en": "Rufflet",
+                "name_fr": "Furaiglon",
+                "id": 627,
+                "bst": 350,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/627.png",
+                "is_shiny": false,
+                "types": "Normal, Flying",
+                "stats": "- Hp: 70\n- Attack: 83\n- Defense: 50\n- Special-attack: 37\n- Special-defense: 50\n- Speed: 60",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/319/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759698274.0005722,
+                "moves": []
+            },
+            {
+                "name_en": "Jangmo-o",
+                "name_fr": "Bébécaille",
+                "id": 782,
+                "bst": 300,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/782.png",
+                "is_shiny": false,
+                "types": "Dragon",
+                "stats": "- Hp: 45\n- Attack: 55\n- Defense: 65\n- Special-attack: 45\n- Special-defense: 45\n- Speed: 45",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/408/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759698274.9317396,
+                "moves": []
+            },
+            {
+                "name_en": "Dragalge",
+                "name_fr": "Kravarech",
+                "id": 691,
+                "bst": 494,
+                "rarity_level": "Rare",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/691.png",
+                "is_shiny": false,
+                "types": "Poison, Dragon",
+                "stats": "- Hp: 65\n- Attack: 75\n- Defense: 90\n- Special-attack: 97\n- Special-defense: 123\n- Speed: 44",
+                "moves": [
+                    {
+                        "name": "Force Cachée",
+                        "power": 70
+                    },
+                    {
+                        "name": "Plongée",
+                        "power": 80
+                    },
+                    {
+                        "name": "Giga Impact",
+                        "power": 150
+                    },
+                    {
+                        "name": "Exploforce",
+                        "power": 120
+                    }
+                ],
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/354/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759700638.192284,
+                "generation": 51
+            },
+            {
+                "name_en": "Zweilous",
+                "name_fr": "Diamat",
+                "id": 634,
+                "bst": 420,
+                "rarity_level": "Rare",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/634.png",
+                "is_shiny": false,
+                "types": "Dark, Dragon",
+                "stats": "- Hp: 72\n- Attack: 85\n- Defense: 70\n- Special-attack: 65\n- Special-defense: 70\n- Speed: 58",
+                "moves": [
+                    {
+                        "name": "Surpuissance",
+                        "power": 120
+                    },
+                    {
+                        "name": "Puissance Cachée",
+                        "power": 60
+                    },
+                    {
+                        "name": "Trépignement",
+                        "power": 75
+                    },
+                    {
+                        "name": "Vibrobscur",
+                        "power": 80
+                    }
+                ],
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/323/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759700673.4491034,
+                "generation": 5
+            }
+        ],
+        "last_bigdeck": 1759865143.4499846,
+        "best_card": {
+            "name_en": "Dragalge",
+            "name_fr": "Kravarech",
+            "id": 691,
+            "bst": 494,
+            "rarity_level": "Rare",
+            "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/691.png",
+            "is_shiny": false,
+            "types": "Poison, Dragon",
+            "stats": "- Hp: 65\n- Attack: 75\n- Defense: 90\n- Special-attack: 97\n- Special-defense: 123\n- Speed: 44",
+            "moves": [
+                {
+                    "name": "Force Cachée",
+                    "power": 70
+                },
+                {
+                    "name": "Plongée",
+                    "power": 80
+                },
+                {
+                    "name": "Giga Impact",
+                    "power": 150
+                },
+                {
+                    "name": "Exploforce",
+                    "power": 120
+                }
+            ],
+            "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/354/",
+            "evolution_stage": 0,
+            "evolution_limit": 2,
+            "last_evolution": 0,
+            "last_draw": 1759700638.192284,
+            "generation": 51
+        }
+    },
+    "654402770438455299": {
+        "deck": [
+            {
+                "name_en": "Arctibax",
+                "name_fr": "Cryodo",
+                "id": 997,
+                "bst": 423,
+                "rarity_level": "Rare",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/997.png",
+                "types": "Dragon, Ice",
+                "stats": "- Hp: 90\n- Attack: 95\n- Defense: 66\n- Special-attack: 45\n- Special-defense: 65\n- Speed: 62",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/527/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 0,
+                "is_shiny": false,
+                "moves": []
+            },
+            {
+                "name_en": "Ampharos",
+                "name_fr": "Pharamp",
+                "id": 181,
+                "bst": 510,
+                "rarity_level": "Épique",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/181.png",
+                "types": "Electric",
+                "stats": "- Hp: 90\n- Attack: 75\n- Defense: 85\n- Special-attack: 115\n- Special-defense: 90\n- Speed: 55",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/89/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 0,
+                "is_shiny": false,
+                "moves": []
+            },
+            {
+                "name_en": "Marshadow",
+                "name_fr": "Marshadow",
+                "id": 802,
+                "bst": 600,
+                "rarity_level": "Légendaire",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/802.png",
+                "types": "Fighting, Ghost",
+                "stats": "- Hp: 90\n- Attack: 125\n- Defense: 80\n- Special-attack: 90\n- Special-defense: 90\n- Speed: 125",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/423/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 0,
+                "is_shiny": false,
+                "moves": []
+            },
+            {
+                "name_en": "Slaking",
+                "name_fr": "Monaflèmit",
+                "id": 289,
+                "bst": 670,
+                "rarity_level": "Légendaire",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/289.png",
+                "types": "Normal",
+                "stats": "- Hp: 150\n- Attack: 160\n- Defense: 100\n- Special-attack: 95\n- Special-defense: 65\n- Speed: 100",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/143/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 0,
+                "is_shiny": false,
+                "moves": []
+            },
+            {
+                "name_en": "Chimchar",
+                "name_fr": "Ouisticram",
+                "id": 390,
+                "bst": 309,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/390.png",
+                "types": "Fire",
+                "stats": "- Hp: 44\n- Attack: 58\n- Defense: 44\n- Special-attack: 58\n- Special-defense: 44\n- Speed: 61",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/204/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 0,
+                "is_shiny": false,
+                "moves": []
+            },
+            {
+                "name_en": "Larvesta",
+                "name_fr": "Pyronille",
+                "id": 636,
+                "bst": 360,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/636.png",
+                "is_shiny": false,
+                "types": "Bug, Fire",
+                "stats": "- Hp: 55\n- Attack: 85\n- Defense: 55\n- Special-attack: 50\n- Special-defense: 55\n- Speed: 60",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/324/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759698067.4927547,
+                "moves": []
+            }
+        ],
+        "last_bigdeck": 1759697114.6928692,
+        "best_card": null
+    },
+    "699197893474648064": {
+        "deck": [
+            {
+                "name_en": "Pansage",
+                "name_fr": "Feuillajou",
+                "id": 511,
+                "bst": 316,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/511.png",
+                "is_shiny": false,
+                "types": "Grass",
+                "stats": "- Hp: 50\n- Attack: 53\n- Defense: 48\n- Special-attack: 53\n- Special-defense: 48\n- Speed: 64",
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/262/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759698315.810115,
+                "moves": []
+            },
+            {
+                "name_en": "Orbeetle",
+                "name_fr": "Astronelle",
+                "id": 826,
+                "bst": 505,
+                "rarity_level": "Épique",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/826.png",
+                "is_shiny": false,
+                "types": "Bug, Psychic",
+                "stats": "- Hp: 60\n- Attack: 45\n- Defense: 110\n- Special-attack: 80\n- Special-defense: 120\n- Speed: 90",
+                "moves": [
+                    {
+                        "name": "Vaste Pouvoir",
+                        "power": 80
+                    },
+                    {
+                        "name": "Giga Impact",
+                        "power": 150
+                    },
+                    {
+                        "name": "Lance-Soleil",
+                        "power": 120
+                    },
+                    {
+                        "name": "Choc Psy",
+                        "power": 80
+                    }
+                ],
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/435/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759700349.8184054,
+                "generation": 5111
+            },
+            {
+                "name_en": "Mime-jr",
+                "name_fr": "Mime jr.",
+                "id": 439,
+                "bst": 310,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/439.png",
+                "is_shiny": false,
+                "types": "Psychic, Fairy",
+                "stats": "- HP: 20\n- Attack: 25\n- Defense: 45\n- Special-attack: 70\n- Special-defense: 90\n- Speed: 60",
+                "moves": [
+                    {
+                        "name": "Fatal-Foudre",
+                        "power": 110
+                    },
+                    {
+                        "name": "Dévorêve",
+                        "power": 100
+                    },
+                    {
+                        "name": "Larcin",
+                        "power": 60
+                    },
+                    {
+                        "name": "Prescience",
+                        "power": 120
+                    }
+                ],
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/57/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759701112.9853022,
+                "generation": 15
+            },
+            {
+                "name_en": "Bounsweet",
+                "name_fr": "Croquine",
+                "id": 761,
+                "bst": 210,
+                "rarity_level": "Commun",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/761.png",
+                "is_shiny": false,
+                "types": "Grass",
+                "stats": "- HP: 42\n- Attack: 30\n- Defense: 38\n- Special-attack: 30\n- Special-defense: 38\n- Speed: 32",
+                "moves": [
+                    {
+                        "name": "Tranch’Herbe",
+                        "power": 55
+                    },
+                    {
+                        "name": "Chant Canon",
+                        "power": 60
+                    },
+                    {
+                        "name": "Psykoud’Boul",
+                        "power": 80
+                    },
+                    {
+                        "name": "Bélier",
+                        "power": 90
+                    }
+                ],
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/392/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 1759701486.7773218,
+                "generation": 511
+            },
+            {
+                "id": 802,
+                "name_en": "Marshadow",
+                "name_fr": "Marshadow",
+                "bst": 600,
+                "rarity_level": "Légendaire",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/802.png",
+                "is_shiny": false,
+                "types": "Fighting, Ghost",
+                "stats": "- Hp: 90\n- Attack: 125\n- Defense: 80\n- Special-attack: 90\n- Special-defense: 90\n- Speed: 125",
+                "moves": [
+                    {
+                        "name": "Riposte",
+                        "power": 50
+                    },
+                    {
+                        "name": "Mawashi Geri",
+                        "power": 60
+                    },
+                    {
+                        "name": "Larcin",
+                        "power": 70
+                    },
+                    {
+                        "name": "Ultralaser",
+                        "power": 50
+                    }
+                ],
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/423/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 0,
+                "generation": 511
+            },
+            {
+                "id": 493,
+                "name_en": "Arceus",
+                "name_fr": "Arceus",
+                "bst": 720,
+                "rarity_level": "Mythique",
+                "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png",
+                "is_shiny": false,
+                "types": "Normal",
+                "stats": "- Hp: 120\n- Attack: 120\n- Defense: 120\n- Special-attack: 120\n- Special-defense: 120\n- Speed: 120",
+                "moves": [
+                    {
+                        "name": "Ultralaser",
+                        "power": 40
+                    },
+                    {
+                        "name": "Coup d’Boule",
+                        "power": 100
+                    },
+                    {
+                        "name": "Surf",
+                        "power": 80
+                    },
+                    {
+                        "name": "Tonnerre",
+                        "power": 30
+                    }
+                ],
+                "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/254/",
+                "evolution_stage": 0,
+                "evolution_limit": 2,
+                "last_evolution": 0,
+                "last_draw": 0,
+                "generation": 15
+            }
+        ],
+        "last_bigdeck": 1759865087.133973,
+        "best_card": {
+            "id": 493,
+            "name_en": "Arceus",
+            "name_fr": "Arceus",
+            "bst": 720,
+            "rarity_level": "Mythique",
+            "image_url": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/493.png",
+            "is_shiny": false,
+            "types": "Normal",
+            "stats": "- Hp: 120\n- Attack: 120\n- Defense: 120\n- Special-attack: 120\n- Special-defense: 120\n- Speed: 120",
+            "moves": [
+                {
+                    "name": "Ultralaser",
+                    "power": 40
+                },
+                {
+                    "name": "Coup d’Boule",
+                    "power": 100
+                },
+                {
+                    "name": "Surf",
+                    "power": 80
+                },
+                {
+                    "name": "Tonnerre",
+                    "power": 30
+                }
+            ],
+            "evolution_chain_url": "https://pokeapi.co/api/v2/evolution-chain/254/",
+            "evolution_stage": 0,
+            "evolution_limit": 2,
+            "last_evolution": 0,
+            "last_draw": 0,
+            "generation": 15
+        }
+    }
+}
