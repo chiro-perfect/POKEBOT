@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (V8 - Floutage OpenCV)
+# bot.py - PokéDeck Version Finale (V8 - Corrigé Définitif des Vues Interactives)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -9,13 +9,12 @@ import io
 import json
 import os
 import time
-# Suppression de l'import Pillow
-# Ajout de l'import CV2 (qui sera géré par numpy et io)
+# Utilisation d'OpenCV pour le floutage
 import numpy as np
 import cv2
 from dotenv import load_dotenv
 
-# --- SETUP ET CONSTANTES ---
+# --- SETUP ET CONSTANTES (Même structure) ---
 load_dotenv()
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 print("TOKEN chargé ?", bool(TOKEN))
@@ -514,36 +513,47 @@ class TuPrefereView(View):
         self.clear_items(); c1, c2 = self.cards
         btn1_style = discord.ButtonStyle.primary if self.current_selection == 0 else discord.ButtonStyle.secondary
         btn2_style = discord.ButtonStyle.primary if self.current_selection == 1 else discord.ButtonStyle.secondary
-        # Utilisation de la méthode classique pour éviter le conflit "callback"
-        btn1 = Button(label=f"Choisir {c1['name_fr']}", style=btn1_style, custom_id="tp_0", callback=self.make_cb(0)); self.add_item(btn1)
-        btn2 = Button(label=f"Choisir {c2['name_fr']}", style=btn2_style, custom_id="tp_1", callback=self.make_cb(1)); self.add_item(btn2)
+        
+        # Bouton 1: Choisir c1
+        self.add_item(Button(label=f"Choisir {c1['name_fr']}", style=btn1_style, custom_id="tp_0", row=0, callback=self._select_card_cb(0)))
+        
+        # Bouton 2: Choisir c2
+        self.add_item(Button(label=f"Choisir {c2['name_fr']}", style=btn2_style, custom_id="tp_1", row=0, callback=self._select_card_cb(1)))
+        
         card_to_change = self.cards[1-self.current_selection]
-        change_btn = Button(label=f"🔄 Changer {card_to_change['name_fr']}", style=discord.ButtonStyle.secondary, row=1, callback=self.change_cb); self.add_item(change_btn)
-        finish_btn = Button(label="✅ J'ai choisi !", style=discord.ButtonStyle.success, row=1, callback=self.finish_cb); self.add_item(finish_btn)
+        
+        # Bouton Changer (défini par décorateur pour éviter l'erreur callback)
+        self._add_fixed_buttons()
 
-    def make_cb(self, index):
+    def _select_card_cb(self, index):
         async def cb(interaction: discord.Interaction):
             if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
             self.current_selection = index; self.update_buttons(); embed = self.create_embed()
             await interaction.response.edit_message(embed=embed, view=self)
         return cb
-        
-    async def change_cb(self, interaction: discord.Interaction):
-        if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
-        await interaction.response.defer()
-        card_to_keep = self.cards[self.current_selection]; new_card = await self.draw_new_card(card_to_keep); self.cards[1-self.current_selection] = new_card
-        self.update_buttons(); embed = self.create_embed()
-        await interaction.edit_original_response(embed=embed, view=self)
 
-    async def finish_cb(self, interaction: discord.Interaction):
-        if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
-        chosen_card = self.cards[self.current_selection]; reward, added_to_deck = add_card_to_collection(self.user_id, chosen_card)
-        msg = f"🎉 **{interaction.user.mention}** a choisi **{chosen_card['name_fr']}** ! Carte ajoutée à votre collection. **+ ₽{reward}**."
-        if not added_to_deck: msg += f"\n(Deck actif plein.)"
-        await interaction.response.edit_message(content=msg, embed=None, view=None, attachments=[]); 
+    def _add_fixed_buttons(self):
+        # Bouton Changer l'autre (Doit être ajouté après la création de la vue)
+        card_to_change = self.cards[1-self.current_selection]
         
-        channel_id = self.ctx.channel_id if isinstance(self.ctx, discord.Interaction) else self.ctx.channel.id
-        tu_prefere_games.pop(channel_id, None); self.stop()
+        @discord.ui.button(label=f"🔄 Changer {card_to_change['name_fr']}", style=discord.ButtonStyle.secondary, row=1, custom_id="tp_change")
+        async def change_cb(self, interaction: discord.Interaction, button: Button):
+            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
+            await interaction.response.defer()
+            card_to_keep = self.cards[self.current_selection]; new_card = await self.draw_new_card(card_to_keep); self.cards[1-self.current_selection] = new_card
+            self.update_buttons(); embed = self.create_embed()
+            await interaction.edit_original_response(embed=embed, view=self)
+            
+        @discord.ui.button(label="✅ J'ai choisi !", style=discord.ButtonStyle.success, row=1, custom_id="tp_finish")
+        async def finish_cb(self, interaction: discord.Interaction, button: Button):
+            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
+            chosen_card = self.cards[self.current_selection]; reward, added_to_deck = add_card_to_collection(self.user_id, chosen_card)
+            msg = f"🎉 **{interaction.user.mention}** a choisi **{chosen_card['name_fr']}** ! Carte ajoutée à votre collection. **+ ₽{reward}**."
+            if not added_to_deck: msg += f"\n(Deck actif plein.)"
+            await interaction.response.edit_message(content=msg, embed=None, view=None, attachments=[]); 
+            
+            channel_id = self.ctx.channel_id if isinstance(self.ctx, discord.Interaction) else self.ctx.channel.id
+            tu_prefere_games.pop(channel_id, None); self.stop()
 
     async def draw_new_card(self, current_card):
         while True:
@@ -736,7 +746,7 @@ async def cmd_carte(user, target):
         
     reward, added_to_deck = add_card_to_collection(user.id, card)
     emoji = get_rarity_emoji(card.get("rarity_level","Commun")); embed = discord.Embed(title=f"🎴 {card['name_fr']} !", color=get_rarity_color(card.get("rarity_level","Commun")))
-    embed.set_thumbnail(url=card.get("image_url")); embed.add_field(name="Rareté", value=f"{emoji} {card.get('rarity_level')}", inline=True)
+    embed.set_thumbnail(url=card.get("image_url")); embed.add_field(name="Rareté", value=f"{emoji} {card.get("rarity_level")}", inline=True)
     embed.add_field(name="BST", value=str(card.get("bst","?")), inline=True); embed.add_field(name="Gain", value=f"**+ ₽{reward}**", inline=True)
     msg = f"**{card['name_fr']}** tiré. "; 
     if not added_to_deck: msg += f"\n(Ajouté à votre **PC/Collection**. Deck actif plein.)"
@@ -1094,19 +1104,24 @@ async def cmd_devine(target):
         # Floutage CV2
         file = await get_blurred_sprite_file(card["id"], is_shiny=False, blur_level=25)
         if not file: 
-            # Si le floutage échoue, on envoie l'image claire.
+            # Si le floutage échoue, on utilise l'URL claire et on modifie le message.
             print("INFO: Échec du floutage, utilisation de l'image claire.")
-            file = discord.File(io.BytesIO(await aiohttp.request('GET', card['image_url']).read()), filename="pokemon_inconnu.png")
-        
+            
         random_move = random.choice(card.get("moves", [{"name": "Charge"}]))["name"]
         
         current_guess_game = {"id": card["id"], "name": card["name_en"].lower(), "name_fr": card["name_fr"].lower(), "channel_id": (target.channel_id if is_interaction else target.channel.id), "hints": 0, "generation": card.get("generation", 1), "types": card.get("types", "Inconnu"), "random_move": random_move, "image_url": card.get("image_url")}
         
         embed = discord.Embed(title="🔍 Quel est ce Pokémon ?", description="Devinez le nom (FR ou EN) en tapant dans le chat.\nUtilisez `/indice` (max 5) pour déflouter/obtenir un indice, ou `/jcp` pour abandonner.", color=discord.Color.blue())
         embed.set_author(name=target.user.display_name if is_interaction else target.author.display_name, icon_url=target.user.display_avatar.url if is_interaction else target.author.display_avatar.url)
-        embed.set_image(url="attachment://pokemon_inconnu.png")
         
-        await send_target.send(embed=embed, file=file)
+        # Utilise l'URL ou le fichier flou
+        if file:
+            embed.set_image(url="attachment://pokemon_inconnu.png")
+            await send_target.send(embed=embed, file=file)
+        else:
+            embed.set_image(url=card['image_url'])
+            embed.set_footer(text="Indice : L'image n'est pas floutée (Vérifiez votre installation OpenCV). Utilisez /indice pour les indices textuels. 🕵️")
+            await send_target.send(embed=embed)
         
     except Exception as e:
         print(f"Erreur fatale dans cmd_devine: {e}")
@@ -1140,10 +1155,10 @@ async def cmd_indice(target):
     blur_levels = {1: 20, 2: 15, 3: 10, 4: 5, 5: 0}
     blur = blur_levels.get(hint_num, 0); 
     
-    # NOUVEAU: Tente le floutage progressif (CV2)
+    # Tente le floutage progressif (CV2)
     file = await get_blurred_sprite_file(pokemon_id, is_shiny=False, blur_level=blur)
     
-    hints_text = {1: f"**Génération :** Ce Pokémon est de la **Génération {current_guess_game.get('generation', '?')}**.", 2: f"**Type(s) :** Ce Pokémon est de type **{current_guess_game.get('types', '?')}**.", 3: f"**Attaque :** Ce Pokémon peut apprendre **{current_guess_game.get('random_move', '?')}**.", 4: "**Image défloutée !** L'image est plus nette." if file else "**Indice 4 (Textuel) :** Le floutage a échoué. Indice textuel donné.", 5: "**Image claire !** Dernière chance !"}
+    hints_text = {1: f"**Génération :** Ce Pokémon est de la **Génération {current_guess_game.get('generation', '?')}**.", 2: f"**Type(s) :** Ce Pokémon est de type **{current_guess_game.get('types', '?')}**.", 3: f"**Attaque :** Ce Pokémon peut apprendre **{current_guess_game.get('random_move', '?')}**.", 4: "**Image défloutée !** L'image est plus nette.", 5: "**Image claire !** Dernière chance !"}
     msg = hints_text.get(hint_num, "")
     
     embed = discord.Embed(title=f"💡 Indice #{hint_num}/{MAX_HINTS}", description=msg, color=discord.Color.orange())
