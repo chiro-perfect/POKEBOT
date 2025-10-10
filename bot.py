@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (Débogage Total V4 - Stabilité Maximale)
+# bot.py - PokéDeck Version Finale (Anti-Blocage Sûr)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -657,6 +657,7 @@ async def carte(ctx): await cmd_carte(ctx.author, ctx)
 async def slash_carte(interaction: discord.Interaction): await cmd_carte(interaction.user, interaction)
 
 async def cmd_carte(user, target):
+    # DÉBUG STABILITÉ: Assure que la liste Pokémon est chargée
     if not all_pokemon_list: 
         msg = "Données en cours de chargement..."
         if isinstance(target, discord.Interaction): await target.response.send_message(msg); return
@@ -816,13 +817,11 @@ async def cmd_deck(user, target, member):
         async def edit_cb(interaction: discord.Interaction):
             if interaction.user.id != user.id: await interaction.response.send_message("Pas votre deck.", ephemeral=True); return
             view_edit = DeckEditView(interaction, ud["collection"]) 
-            # Réponse éphémère pour la vue de sélection afin de ne pas spammer le salon
             await interaction.response.send_message(f"**PC/Collection:** Sélectionnez 6 cartes pour votre deck actif (Actuel: {len(view_edit.current_deck_indices)}/6)", view=view_edit, ephemeral=True)
             
         edit_btn = Button(label="🔄 Modifier le deck (PC)", style=discord.ButtonStyle.primary); pc_btn = Button(label="💻 Voir PC (Collection)", style=discord.ButtonStyle.secondary)
         edit_btn.callback = edit_cb; pc_btn.callback = pc_cb; view.add_item(edit_btn); view.add_item(pc_btn)
         
-        # Envoi de l'embed principal AVEC les boutons
         if isinstance(target, discord.Interaction): await target.followup.send(embed=embed, view=view)
         else: await target.send(embed=embed, view=view)
     else:
@@ -1021,6 +1020,7 @@ async def cmd_devine(target):
         else: await target.send(msg)
         return
         
+    # Correction: Defer si interaction
     if is_interaction: await target.response.defer()
         
     pick = random.choice(all_pokemon_list); card = await fetch_pokemon_details(pick["id"], is_shiny=False)
@@ -1092,7 +1092,7 @@ async def cmd_tuprefere(target):
         if is_interaction: await target.response.send_message(msg, ephemeral=True)
         else: await target.send(msg)
         return
-    if len(all_pokemon_list) < 2: return
+    if len(all_pokemon_list) < 2: return await send_target.send("Données Pokémon non chargées. Veuillez réessayer.")
     
     if is_interaction: await target.response.defer()
     
