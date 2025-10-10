@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (Débogage Total V5 - Stabilité UI/API)
+# bot.py - PokéDeck Version Finale (V5 - Stabilité UI/API)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
