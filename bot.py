@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (V6 - bon normalement la inshallah c bon)
+# bot.py - PokéDeck Version Finale (V6 - Résolution d'Incompatibilité UI)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
