@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (Stabilité Ultime - Anti-API Fail)
+# bot.py - PokéDeck Version Finale (Débogage Total V5 - Stabilité UI/API)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -246,7 +246,7 @@ async def load_all_pokemon():
         print(f"✅ {len(all_pokemon_list)} Pokémon chargés.")
     except Exception as e: print(f"❌ Erreur: {e}")
 
-# NOUVEAU: Fonction d'attente sécurisée pour la liste Pokémon
+# NOUVEAU: Fonction d'attente sécurisée pour la liste Pokémon (utilisé dans les messages d'erreur)
 async def wait_for_pokemon_list(target):
     if not all_pokemon_list:
         msg = "⏳ Les données Pokémon sont encore en cours de chargement. Veuillez réessayer dans un instant."
@@ -662,8 +662,7 @@ class DeckDuelManager:
 async def on_ready():
     print("✅ Bot prêt:", bot.user)
     load_user_decks()
-    # La liste est chargée en tâche de fond
-    bot.loop.create_task(load_all_pokemon()) 
+    bot.loop.create_task(load_all_pokemon())
     
     await bot.tree.sync()
     print("✅ Commandes Slash synchronisées.")
@@ -704,7 +703,7 @@ async def cmd_carte(user, target):
     
     is_shiny = random.random() < RARITIES["Chrome"]["chance"]; pid = random.choice(all_pokemon_list)["id"]; card = await fetch_pokemon_details(pid, is_shiny=is_shiny)
     if not card: 
-        msg = "Erreur lors du tirage de la carte. L'API est peut-être inaccessible. Réessayez."
+        msg = "Erreur lors du tirage de la carte. L'API est peut-être lente. Réessayez."
         if isinstance(target, discord.Interaction): await target.followup.send(msg); return
         else: await target.send(msg); return
         
@@ -1054,7 +1053,7 @@ async def cmd_devine(target):
     
     if is_interaction: await target.response.defer()
     
-    if not all_pokemon_list: return await send_target.send("Données en cours de chargement...")
+    if not all_pokemon_list: return await send_target.send("Données Pokémon non chargées. Veuillez réessayer.")
     if current_guess_game and current_guess_game.get("channel_id") == (target.channel_id if is_interaction else target.channel.id): 
         msg = "Un jeu est déjà en cours dans ce salon. `/jcp` pour abandonner."
         if is_interaction: await target.response.send_message(msg, ephemeral=True)
