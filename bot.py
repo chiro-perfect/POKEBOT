@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (Débogage Total V4 - Stabilité Maximale)
+# bot.py - PokéDeck Version Finale (Stabilité Ultime - Anti-API Fail)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -219,6 +219,15 @@ async def load_all_pokemon():
             all_pokemon_list = [{"id": int(item["url"].split("/")[-2]), "name": item["name"], "bst": 0} for item in data.get("results", [])]
         print(f"✅ {len(all_pokemon_list)} Pokémon chargés.")
     except Exception as e: print(f"❌ Erreur: {e}")
+
+# NOUVEAU: Fonction d'attente sécurisée pour la liste Pokémon
+async def wait_for_pokemon_list(target):
+    if not all_pokemon_list:
+        msg = "⏳ Les données Pokémon sont encore en cours de chargement. Veuillez réessayer dans un instant."
+        if isinstance(target, discord.Interaction): await target.response.send_message(msg, ephemeral=True)
+        else: await target.send(msg)
+        return False
+    return True
 
 def get_rarity_emoji(name): return RARITIES.get(name, {}).get("emoji", "❓")
 def get_rarity_color(name): return RARITIES.get(name, {}).get("color", discord.Color.blue().value)
@@ -642,7 +651,7 @@ async def slash_help(interaction: discord.Interaction):
 
 async def send_help_embed(target):
     embed = discord.Embed(title="🤖 PokéBot — Aide (Slash & Prefix)", description="Toutes les commandes fonctionnent avec `/` ou `!`", color=discord.Color.blue())
-    embed.add_field(name="💼 Collection & Économie (₽)", value="`/carte` ou `!carte` — Tire une carte (gain ₽)\n`/booster` ou `!booster` — Pioche 5 cartes (coût ₽)\n`/deck` ou `!deck` — Affiche ton deck actif / **Modifier** (PC)\n`/solde` ou `!solde` — Affiche tes Pokédollars (₽)", inline=False)
+    embed.add_field(name="💼 Collection & Économie (₽)", value="`/carte` ou `!carte` — Tire une carte (gain ₽)\n`/booster` ou `!booster` — Pioche 5 cartes (coût ₽)\n`/deck` ou `!deck` — Affiche ton deck actif / **Modifier** (PC)\n`/solde` ou `!solde` — Taux d'obtention de Shinies (0.1%)\n`/solde` ou `!solde` — Affiche tes Pokédollars (₽)", inline=False)
     embed.add_field(name="⚔️ Évolution & Duels", value="`/evolve [slot]` — Défi **Eau/Feu/Plante** pour évolution (coût/gain ₽)\n`/pfc [choix]` — Joue au défi évolution\n`/deckduel @user` — Duel stratégique (**Système d'Énergie**, gain ₽)", inline=False)
     embed.add_field(name="🎲 Mini-jeux", value="`/devine` — Quel est ce Pokémon ?\n`/indice` — Défloutage progressif\n`/tuprefere` — Choisis entre deux Pokémon", inline=False)
     
@@ -657,17 +666,21 @@ async def carte(ctx): await cmd_carte(ctx.author, ctx)
 async def slash_carte(interaction: discord.Interaction): await cmd_carte(interaction.user, interaction)
 
 async def cmd_carte(user, target):
-    if not all_pokemon_list: 
-        msg = "Données en cours de chargement..."
-        if isinstance(target, discord.Interaction): await target.response.send_message(msg); return
-        else: await target.send(msg); return
-    
     # Correction: Defer uniquement si c'est un slash
     if isinstance(target, discord.Interaction) and not target.response.is_done(): 
         await target.response.defer()
 
+    if not all_pokemon_list: 
+        msg = "Données en cours de chargement..."
+        if isinstance(target, discord.Interaction): await target.followup.send(msg); return
+        else: await target.send(msg); return
+    
     is_shiny = random.random() < RARITIES["Chrome"]["chance"]; pid = random.choice(all_pokemon_list)["id"]; card = await fetch_pokemon_details(pid, is_shiny=is_shiny)
-    if not card: return
+    if not card: 
+        msg = "Erreur lors du tirage de la carte. Réessayez."
+        if isinstance(target, discord.Interaction): await target.followup.send(msg); return
+        else: await target.send(msg); return
+        
     reward, added_to_deck = add_card_to_collection(user.id, card)
     emoji = get_rarity_emoji(card.get("rarity_level","Commun")); embed = discord.Embed(title=f"🎴 {card['name_fr']} !", color=get_rarity_color(card.get("rarity_level","Commun")))
     embed.set_thumbnail(url=card.get("image_url")); embed.add_field(name="Rareté", value=f"{emoji} {card.get('rarity_level')}", inline=True)
@@ -1012,6 +1025,8 @@ async def cmd_devine(target):
     is_interaction = isinstance(target, discord.Interaction)
     send_target = target.followup if is_interaction else target
     
+    if is_interaction: await target.response.defer()
+    
     if not all_pokemon_list: return await send_target.send("Données en cours de chargement...")
     if current_guess_game and current_guess_game.get("channel_id") == (target.channel_id if is_interaction else target.channel.id): 
         msg = "Un jeu est déjà en cours dans ce salon. `/jcp` pour abandonner."
@@ -1019,12 +1034,10 @@ async def cmd_devine(target):
         else: await target.send(msg)
         return
         
-    if is_interaction: await target.response.defer()
-    
     try:
         # --- LOGIQUE CRITIQUE ---
         pick = random.choice(all_pokemon_list); card = await fetch_pokemon_details(pick["id"], is_shiny=False)
-        if not card: return await send_target.send("Erreur lors de la récupération des détails du Pokémon.")
+        if not card: return await send_target.send("Erreur lors de la récupération des détails du Pokémon. L'API est peut-être lente.")
         
         file = await get_blurred_sprite_file(card["id"], is_shiny=False, blur_level=25)
         if not file: return await send_target.send("Erreur lors de la création de l'image floue.")
@@ -1041,7 +1054,7 @@ async def cmd_devine(target):
         
     except Exception as e:
         print(f"Erreur fatale dans cmd_devine: {e}")
-        await send_target.send(f"Une erreur inattendue est survenue lors du lancement du jeu. (Erreur: {e})")
+        await send_target.send(f"Une erreur critique est survenue lors du lancement du jeu (API/Image). (Erreur: {e})")
 
 @bot.command()
 async def indice(ctx): await cmd_indice(ctx)
@@ -1115,7 +1128,7 @@ async def cmd_tuprefere(target):
 
     except Exception as e:
         print(f"Erreur fatale dans cmd_tuprefere: {e}")
-        await send_target.send(f"Une erreur inattendue est survenue lors du lancement du jeu. (Erreur: {e})")
+        await send_target.send(f"Une erreur critique est survenue lors du lancement du jeu (API/Image). (Erreur: {e})")
 
 
 @bot.event
