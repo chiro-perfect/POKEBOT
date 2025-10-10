@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (Débogage Total V4 - Anti-Blocage)
+# bot.py - PokéDeck Version Finale (Débogage Total V4 - Stabilité Maximale)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
