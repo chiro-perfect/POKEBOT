@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (V5 - Stabilité UI/API)
+# bot.py - PokéDeck Version Finale (V6 - bon normalement la inshallah c bon)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -281,7 +281,7 @@ class CardSelectionView(View):
 
     def make_cb(self, idx):
         async def cb(interaction: discord.Interaction):
-            if interaction.user.id != self.user_id: await interaction.response.send_message("Ce n'est pas votre sélection.", ephemeral=True); return
+            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre sélection.", ephemeral=True); return
             if idx in self.selected: self.selected.remove(idx)
             else:
                 if len(self.selected) >= self.num_cards_required: await interaction.response.send_message(f"Max {self.num_cards_required} cartes.", ephemeral=True); return
