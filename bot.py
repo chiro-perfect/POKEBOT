@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (V6 - Résolution d'Incompatibilité UI)
+# bot.py - PokéDeck Version Finale (V7 - Compatibilité UI Forcée)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -327,8 +327,10 @@ class DeckEditView(View):
             label = f"{card.get('name_fr', '?')[:12]} ({card.get('bst', '?')})"
             is_shiny_mark = "🌟" if card.get("is_shiny") else ""
             btn_style = discord.ButtonStyle.primary if is_in_deck else get_button_style_for_rarity(rarity)
+            # Utilisation de make_card_cb pour la rétrocompatibilité (même si la syntaxe ci-dessous est V2+)
             btn = Button(label=f"{label}{is_shiny_mark}", style=btn_style, custom_id=f"deck_edit_{coll_idx}", emoji=emoji, row=i // 4, callback=self.make_card_cb(coll_idx)); self.add_item(btn)
 
+        # Utilisation de décorateurs pour les boutons de contrôle (Standard V2+)
         self.add_item(Button(label="⬅️ Précédent", custom_id="page_prev", disabled=self.page == 0, row=4, callback=self.page_prev_cb))
         self.add_item(Button(label=f"💾 Sauver ({len(self.current_deck_indices)}/6)", custom_id="deck_save", style=discord.ButtonStyle.success, disabled=len(self.current_deck_indices) != self.max_deck_size, row=4, callback=self.deck_save_cb))
         self.add_item(Button(label="Suivant ➡️", custom_id="page_next", disabled=end_index >= len(self.collection), row=4, callback=self.page_next_cb))
@@ -486,13 +488,12 @@ class TuPrefereView(View):
         self.clear_items(); c1, c2 = self.cards
         btn1_style = discord.ButtonStyle.primary if self.current_selection == 0 else discord.ButtonStyle.secondary
         btn2_style = discord.ButtonStyle.primary if self.current_selection == 1 else discord.ButtonStyle.secondary
-        btn1 = Button(label=f"Choisir {c1['name_fr']}", style=btn1_style, custom_id="tp_0", callback=self.make_cb(0))
-        btn2 = Button(label=f"Choisir {c2['name_fr']}", style=btn2_style, custom_id="tp_1", callback=self.make_cb(1))
-        self.add_item(btn1); self.add_item(btn2)
+        # Utilisation de la méthode classique pour éviter le conflit "callback"
+        btn1 = Button(label=f"Choisir {c1['name_fr']}", style=btn1_style, custom_id="tp_0", callback=self.make_cb(0)); self.add_item(btn1)
+        btn2 = Button(label=f"Choisir {c2['name_fr']}", style=btn2_style, custom_id="tp_1", callback=self.make_cb(1)); self.add_item(btn2)
         card_to_change = self.cards[1-self.current_selection]
-        change_btn = Button(label=f"🔄 Changer {card_to_change['name_fr']}", style=discord.ButtonStyle.secondary, row=1, callback=self.change_cb)
-        finish_btn = Button(label="✅ J'ai choisi !", style=discord.ButtonStyle.success, row=1, callback=self.finish_cb)
-        self.add_item(change_btn); self.add_item(finish_btn)
+        change_btn = Button(label=f"🔄 Changer {card_to_change['name_fr']}", style=discord.ButtonStyle.secondary, row=1, callback=self.change_cb); self.add_item(change_btn)
+        finish_btn = Button(label="✅ J'ai choisi !", style=discord.ButtonStyle.success, row=1, callback=self.finish_cb); self.add_item(finish_btn)
 
     def make_cb(self, index):
         async def cb(interaction: discord.Interaction):
@@ -709,7 +710,7 @@ async def cmd_carte(user, target):
         
     reward, added_to_deck = add_card_to_collection(user.id, card)
     emoji = get_rarity_emoji(card.get("rarity_level","Commun")); embed = discord.Embed(title=f"🎴 {card['name_fr']} !", color=get_rarity_color(card.get("rarity_level","Commun")))
-    embed.set_thumbnail(url=card.get("image_url")); embed.add_field(name="Rareté", value=f"{emoji} {card.get('rarity_level')}", inline=True)
+    embed.set_thumbnail(url=card.get("image_url")); embed.add_field(name="Rareté", value=f"{emoji} {card.get("rarity_level")}", inline=True)
     embed.add_field(name="BST", value=str(card.get("bst","?")), inline=True); embed.add_field(name="Gain", value=f"**+ ₽{reward}**", inline=True)
     msg = f"**{card['name_fr']}** tiré. "; 
     if not added_to_deck: msg += f"\n(Ajouté à votre **PC/Collection**. Deck actif plein.)"
