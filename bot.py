@@ -272,7 +272,7 @@ class CardSelectionView(View):
         
 class DeckEditView(View):
     def __init__(self, ctx, collection):
-        super().__init__(timeout=180.0); self.ctx = ctx; self.user_id = ctx.author.id; self.collection = collection
+        super().__init__(timeout=180.0); self.ctx = ctx; self.user_id = ctx.author.id if isinstance(ctx, commands.Context) else ctx.user.id; self.collection = collection
         active_deck = user_decks.get(self.user_id, {}).get("deck", [])
         self.current_deck_indices = []
         for d_card in active_deck:
@@ -302,7 +302,7 @@ class DeckEditView(View):
             if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre PC.", ephemeral=True); return
             if coll_idx in self.current_deck_indices: self.current_deck_indices.remove(coll_idx)
             else:
-                if len(self.current_deck_indices) >= self.max_deck_size: await interaction.response.send_message(f"Le deck est plein (Max {self.max_deck_size}). Retirez-en un d'abord.", ephemeral=True); return
+                if len(self.current_deck_indices) >= self.max_deck_size: await interaction.response.send_message("Le deck est plein (Max 6). Retirez-en un d'abord.", ephemeral=True); return
                 self.current_deck_indices.append(coll_idx)
             self.update_buttons(); await interaction.response.edit_message(view=self)
         return cb
@@ -412,7 +412,7 @@ class BigDeckView(View):
         self.session["current_card"] = card; self.session["attempts"] -= 1
         file = await get_blurred_sprite_file(card["id"], is_shiny=card.get("is_shiny",False), blur_level=10)
         rarity_emoji = get_rarity_emoji(card.get("rarity_level","Commun"))
-        embed = discord.Embed(title="✨ BigDeck (reroll) ✨", description=f"Rareté: {rarity_emoji} {card.get('rarity_level','?')} - BST: {card.get('bst','?')}\nRerolls: {self.session['attempts']}", color=get_rarity_color(card.get("rarity_level","Commun")))
+        embed = discord.Embed(title="✨ BigDeck (reroll) ✨", description=f"BST: {card.get('bst','?')} — {rarity_emoji} {card.get('rarity_level','?')} - BST: {card.get('bst','?')}\nRerolls: {self.session['attempts']}", color=get_rarity_color(card.get("rarity_level","Commun")))
         embed.set_image(url="attachment://pokemon_inconnu.png")
         try: await interaction.response.edit_message(embed=embed, attachments=[file] if file else [], view=self)
         except: await interaction.response.send_message(embed=embed, file=file, view=self)
@@ -654,6 +654,10 @@ async def slash_carte(interaction: discord.Interaction): await cmd_carte(interac
 
 async def cmd_carte(user, target):
     if not all_pokemon_list: await target.response.send_message("Données en cours de chargement...") if isinstance(target, discord.Interaction) else target.send("Données en cours de chargement..."); return
+    
+    # Si c'est un slash, on defer d'abord
+    if isinstance(target, discord.Interaction): await target.response.defer()
+
     is_shiny = random.random() < RARITIES["Chrome"]["chance"]; pid = random.choice(all_pokemon_list)["id"]; card = await fetch_pokemon_details(pid, is_shiny=is_shiny)
     if not card: return
     reward, added_to_deck = add_card_to_collection(user.id, card)
@@ -662,7 +666,8 @@ async def cmd_carte(user, target):
     embed.add_field(name="BST", value=str(card.get("bst","?")), inline=True); embed.add_field(name="Gain", value=f"**+ ₽{reward}**", inline=True)
     msg = f"**{card['name_fr']}** tiré. "; 
     if not added_to_deck: msg += f"\n(Ajouté à votre **PC/Collection**. Deck actif plein.)"
-    if isinstance(target, discord.Interaction): await target.response.send_message(msg, embed=embed)
+    
+    if isinstance(target, discord.Interaction): await target.followup.send(msg, embed=embed)
     else: await target.send(msg, embed=embed)
 
 @bot.command()
@@ -746,9 +751,13 @@ async def cmd_bigdeck(user, target):
 async def deck(ctx, member: discord.Member = None): await cmd_deck(ctx.author, ctx, member)
 @bot.tree.command(name="deck", description="Affiche votre deck actif et permet de le modifier (PC).")
 @discord.app_commands.describe(member="Utilisateur dont vous voulez voir le deck.")
-async def slash_deck(interaction: discord.Interaction, member: discord.Member = None): await cmd_deck(interaction.user, interaction, member)
+async def slash_deck(interaction: discord.Interaction, member: discord.Member = None): 
+    # Defer l'interaction avant l'action longue
+    await interaction.response.defer()
+    await cmd_deck(interaction.user, interaction, member)
 
 async def cmd_deck(user, target, member):
+    # La logique ici doit gérer target comme un Context OU une Interaction (déjà defer)
     member_id = member.id if member else user.id
     target_display = member.display_name if member else user.display_name
     
@@ -773,13 +782,13 @@ async def cmd_deck(user, target, member):
 
     if not deck and not ud.get("collection", []): 
         msg = f"{target_display} n'a pas de cartes."
-        if isinstance(target, discord.Interaction): await target.response.send_message(msg); return
+        if isinstance(target, discord.Interaction): await target.followup.send(msg); return
         else: await target.send(msg); return
 
     if not deck: 
         msg = f"{target_display} n'a pas de deck actif (0/6). Utilisez `/carte` ou **Modifier**."
         if member is None and ud.get("collection", []):
-            if isinstance(target, discord.Interaction): await target.response.send_message(msg, view=view);
+            if isinstance(target, discord.Interaction): await target.followup.send(msg, view=view);
             else: await target.send(msg, view=view)
             return
 
@@ -800,18 +809,19 @@ async def cmd_deck(user, target, member):
     if member is None and len(ud.get("collection",[])) >= 6:
         async def edit_cb(interaction: discord.Interaction):
             if interaction.user.id != user.id: await interaction.response.send_message("Pas votre deck.", ephemeral=True); return
-            view_edit = DeckEditView(target, ud["collection"])
-            if isinstance(target, discord.Interaction): await interaction.response.send_message(f"**PC/Collection:** Sélectionnez 6 cartes pour votre deck actif (Actuel: {len(view_edit.current_deck_indices)}/6)", view=view_edit, ephemeral=True)
-            else: await interaction.response.edit_message(content="**PC/Collection:** Sélectionnez 6 cartes pour votre deck actif :", embed=None, view=None); await target.send(f"Sélection actuelle: {len(view_edit.current_deck_indices)}/6", view=view_edit)
-            view.stop()
+            # Passage de l'interaction à la vue pour qu'elle puisse fonctionner correctement
+            view_edit = DeckEditView(interaction, ud["collection"]) 
+            await interaction.response.send_message(f"**PC/Collection:** Sélectionnez 6 cartes pour votre deck actif (Actuel: {len(view_edit.current_deck_indices)}/6)", view=view_edit, ephemeral=True)
+            # Pas besoin de view.stop() ici, car l'interaction de base est déjà defer/terminée.
             
         edit_btn = Button(label="🔄 Modifier le deck (PC)", style=discord.ButtonStyle.primary); pc_btn = Button(label="💻 Voir PC (Collection)", style=discord.ButtonStyle.secondary)
         edit_btn.callback = edit_cb; pc_btn.callback = pc_cb; view.add_item(edit_btn); view.add_item(pc_btn)
         
-        if isinstance(target, discord.Interaction): await target.response.send_message(embed=embed, view=view)
+        # Envoi de l'embed principal AVEC les boutons
+        if isinstance(target, discord.Interaction): await target.followup.send(embed=embed, view=view)
         else: await target.send(embed=embed, view=view)
     else:
-        if isinstance(target, discord.Interaction): await target.response.send_message(embed=embed)
+        if isinstance(target, discord.Interaction): await target.followup.send(embed=embed)
         else: await target.send(embed=embed)
 
 # --- Commandes Duels et Évolution ---
@@ -820,27 +830,29 @@ async def cmd_deck(user, target, member):
 async def evolve(ctx, slot: int): await cmd_evolve(ctx.author, ctx, slot)
 @bot.tree.command(name="evolve", description="Lance un défi Eau/Feu/Plante pour faire évoluer un Pokémon.")
 @discord.app_commands.describe(slot="Numéro du slot (1-6) du Pokémon à faire évoluer.")
-async def slash_evolve(interaction: discord.Interaction, slot: int): await cmd_evolve(interaction.user, interaction, slot)
+async def slash_evolve(interaction: discord.Interaction, slot: int): 
+    await interaction.response.defer()
+    await cmd_evolve(interaction.user, interaction, slot)
 
 async def cmd_evolve(user, target, slot: int):
     uid = user.id; deck = user_decks.get(uid, {}).get("deck", []); 
-    if not deck: return await (target.response.send_message if isinstance(target, discord.Interaction) else target.send)("Deck vide.")
-    if slot < 1 or slot > len(deck): return await (target.response.send_message if isinstance(target, discord.Interaction) else target.send)("Slot invalide.")
+    if not deck: return await (target.followup.send if isinstance(target, discord.Interaction) else target.send)("Deck vide.")
+    if slot < 1 or slot > len(deck): return await (target.followup.send if isinstance(target, discord.Interaction) else target.send)("Slot invalide.")
     card = deck[slot-1]; last = card.get("last_evolution", 0)
     
     if time.time() - last < EVOLUTION_COOLDOWN:
         rem = EVOLUTION_COOLDOWN - (time.time() - last); h = int(rem//3600); m = int((rem%3600)//60)
-        return await (target.response.send_message if isinstance(target, discord.Interaction) else target.send)(f"Cooldown actif. Reviens dans {h}h{m}m.")
+        return await (target.followup.send if isinstance(target, discord.Interaction) else target.send)(f"Cooldown actif. Reviens dans {h}h{m}m.")
     
     if user_decks.get(uid, {}).get("pokedollars", 0) < ECONOMY["EVOLVE_COST"]:
-        return await (target.response.send_message if isinstance(target, discord.Interaction) else target.send)(f"❌ Évolution coûte **₽{ECONOMY['EVOLVE_COST']}**. Solde insuffisant. (`/solde`)")
+        return await (target.followup.send if isinstance(target, discord.Interaction) else target.send)(f"❌ Évolution coûte **₽{ECONOMY['EVOLVE_COST']}**. Solde insuffisant. (`/solde`)")
     
-    if uid in rps_challenges: return await (target.response.send_message if isinstance(target, discord.Interaction) else target.send)("Défi Eau-Feu-Plante déjà en cours.")
+    if uid in rps_challenges: return await (target.followup.send if isinstance(target, discord.Interaction) else target.send)("Défi Eau-Feu-Plante déjà en cours.")
     
     add_pokedollars(uid, -ECONOMY["EVOLVE_COST"])
     rps_challenges[uid] = {"slot":slot, "wins":0, "losses":0, "target_wins":3, "max_rounds":5}
     msg = f"Défi Évolution pour **{card['name_fr']}** (Slot {slot}). Coût : **₽{ECONOMY['EVOLVE_COST']}**. Gagne 3/5 avec `/pfc [eau/feu/plante]`."
-    if isinstance(target, discord.Interaction): await target.response.send_message(msg)
+    if isinstance(target, discord.Interaction): await target.followup.send(msg)
     else: await target.send(msg)
 
 @bot.command()
@@ -853,13 +865,14 @@ async def pfc(ctx, choice: str): await cmd_pfc(ctx.author, ctx, choice)
 ])
 @discord.app_commands.describe(choice="Votre choix : Eau, Feu ou Plante.")
 async def slash_pfc(interaction: discord.Interaction, choice: str): 
+    await interaction.response.defer(ephemeral=False)
     await cmd_pfc(interaction.user, interaction, choice)
 
 async def cmd_pfc(user, target, choice: str):
     uid = user.id; choices_map = {"eau": "💧", "feu": "🔥", "plante": "🌿"}
     if uid not in rps_challenges: 
         msg = "Aucun défi. Lance `/evolve [slot]` d'abord."
-        if isinstance(target, discord.Interaction): await target.response.send_message(msg, ephemeral=True)
+        if isinstance(target, discord.Interaction): await target.followup.send(msg, ephemeral=True)
         else: await target.send(msg)
         return
 
@@ -871,22 +884,27 @@ async def cmd_pfc(user, target, choice: str):
     else: ch["losses"] += 1; res += "Défaite..."
     
     rounds = ch["wins"] + ch["losses"]
+    
+    send_target = target.followup if isinstance(target, discord.Interaction) else target
+    
     if ch["wins"] >= ch["target_wins"]:
         slot = ch["slot"]; card = user_decks[uid]["deck"][slot-1]
-        await (target.response.send_message if isinstance(target, discord.Interaction) else target.send)(res)
+        await send_target.send(res)
         await process_evolution_success(target, uid, slot, card); del rps_challenges[uid]
     elif rounds >= ch["max_rounds"]:
-        await (target.response.send_message if isinstance(target, discord.Interaction) else target.send)(f"{res} Défi échoué.")
+        await send_target.send(f"{res} Défi échoué.")
         del rps_challenges[uid]
     else:
         msg = f"{res} Score: {ch['wins']}/{ch['target_wins']} (Manches: {rounds}/{ch['max_rounds']})"
-        if isinstance(target, discord.Interaction): await target.response.send_message(msg)
-        else: await target.send(msg)
+        await send_target.send(msg)
 
 async def process_evolution_success(target, user_id, slot_number, current_card):
+    # Le début est géré par la fonction d'appel, ici on utilise followup pour slash
+    send_target = target.followup if isinstance(target, discord.Interaction) else target
+    
     next_id = None; url = current_card.get("evolution_chain_url")
     if url: next_id = await fetch_next_evolution_id_from_chain(url, current_card.get("id"))
-    if not next_id: return await (target.response.send_message if isinstance(target, discord.Interaction) else target.send)("Aucune évolution disponible.")
+    if not next_id: return await send_target.send("Aucune évolution disponible.")
     
     new_card = await fetch_pokemon_details(next_id, is_shiny=current_card.get("is_shiny", False))
     if not new_card: return
@@ -909,50 +927,49 @@ async def process_evolution_success(target, user_id, slot_number, current_card):
     if new_card.get("image_url"): embed.set_image(url=new_card["image_url"])
     embed.add_field(name="BST", value=f"{current_card['bst']} ➡️ **{new_card['bst']}**", inline=True)
     embed.add_field(name="Rareté", value=f"{rarity_info.get('emoji')} {rarity_info.get('rarity_level')}", inline=True)
-    if isinstance(target, discord.Interaction): await target.followup.send(embed=embed)
-    else: await target.send(embed=embed)
+    await send_target.send(embed=embed)
 
 
 @bot.command()
 async def deckduel(ctx, opponent: discord.Member): await cmd_deckduel(ctx, opponent)
 @bot.tree.command(name="deckduel", description="Défie un utilisateur dans un duel stratégique (3 cartes, Énergie).")
 @discord.app_commands.describe(opponent="L'utilisateur à défier.")
-async def slash_deckduel(interaction: discord.Interaction, opponent: discord.Member): await cmd_deckduel(interaction, opponent)
+async def slash_deckduel(interaction: discord.Interaction, opponent: discord.Member): 
+    await interaction.response.defer()
+    await cmd_deckduel(interaction, opponent)
 
 async def cmd_deckduel(target, opponent):
     ctx = target if isinstance(target, commands.Context) else target.client.get_channel(target.channel_id)
     user = target.author if isinstance(target, commands.Context) else target.user
     
+    send_target = target.followup if isinstance(target, discord.Interaction) else target
+    
     if opponent.bot or opponent.id == user.id: 
         msg = "Impossible de défier un bot ou vous-même."
-        if isinstance(target, discord.Interaction): await target.response.send_message(msg, ephemeral=True)
-        else: await target.send(msg)
+        await send_target.send(msg, ephemeral=True if isinstance(target, discord.Interaction) else False)
         return
         
     uid = user.id; oid = opponent.id
     deck_u = user_decks.get(uid, {}).get("deck", []); deck_o = user_decks.get(oid, {}).get("deck", [])
     if len(deck_u) < 3: 
         msg = f"{user.display_name}, tu dois avoir 3 cartes minimum dans ton deck actif (`/deck`)."
-        if isinstance(target, discord.Interaction): await target.response.send_message(msg, ephemeral=True)
-        else: await target.send(msg)
+        await send_target.send(msg, ephemeral=True if isinstance(target, discord.Interaction) else False)
         return
     if len(deck_o) < 3: 
         msg = f"{opponent.display_name} doit avoir 3 cartes minimum dans son deck actif."
-        if isinstance(target, discord.Interaction): await target.response.send_message(msg, ephemeral=True)
-        else: await target.send(msg)
+        await send_target.send(msg, ephemeral=True if isinstance(target, discord.Interaction) else False)
         return
     
-    if isinstance(target, discord.Interaction): await target.response.defer()
-    
+    # Étape 1: Sélection Challenger
     view = CardSelectionView(uid, deck_u, num_cards_required=3, timeout=90.0)
     msg_select = f"<@{uid}>, sélectionne 3 cartes pour le duel :"
-    if isinstance(target, discord.Interaction): msg_obj = await target.followup.send(msg_select, view=view)
-    else: msg_obj = await target.send(msg_select, view=view)
+    msg_obj = await send_target.send(msg_select, view=view)
     
     await view.wait()
     if not view.confirmed: await msg_obj.edit(content="Sélection annulée."); return
     challenger_cards = [deck_u[i] for i in view.selected]
     
+    # Étape 2: Défi et Acceptation
     card_list = "\n".join([f"{i+1}. {c['name_fr']} {get_rarity_emoji(c.get('rarity_level','Commun'))}" for i,c in enumerate(challenger_cards)])
     embed = discord.Embed(title="⚔️ Défi DeckDuel", description=f"{opponent.mention}, {user.display_name} te défie !\nCartes sélectionnées:\n{card_list}", color=discord.Color.red())
     
@@ -962,12 +979,14 @@ async def cmd_deckduel(target, opponent):
         if interaction.user.id != oid: await interaction.response.send_message("Pas pour vous.", ephemeral=True); return
         await interaction.response.edit_message(content=f"{opponent.display_name} accepte. Sélectionne tes 3 cartes :", embed=None, view=None)
         
+        # Étape 3: Sélection Opposant
         view2 = CardSelectionView(oid, deck_o, num_cards_required=3, timeout=90.0)
         msg_select_o = await interaction.channel.send(f"<@{oid}>, sélectionne 3 cartes :", view=view2)
         await view2.wait()
         if not view2.confirmed: await msg_select_o.edit(content="Sélection annulée par l'adversaire."); return
         defender_cards = [deck_o[i] for i in view2.selected]
         
+        # Étape 4: Début du duel
         manager = DeckDuelManager(ctx, uid, oid, challenger_cards, defender_cards)
         await interaction.channel.send(f"DeckDuel: <@{uid}> vs <@{oid}> ! Que le meilleur gagne !")
         await manager.send_battle_update()
@@ -989,14 +1008,18 @@ async def slash_devine(interaction: discord.Interaction): await cmd_devine(inter
 
 async def cmd_devine(target):
     global current_guess_game
-    if not all_pokemon_list: await target.response.send_message("Données en cours de chargement...") if isinstance(target, discord.Interaction) else target.send("Données en cours de chargement..."); return
-    if current_guess_game and current_guess_game.get("channel_id") == (target.channel_id if isinstance(target, discord.Interaction) else target.channel.id): 
+    
+    is_interaction = isinstance(target, discord.Interaction)
+    send_target = target.followup if is_interaction else target
+    
+    if not all_pokemon_list: return await send_target.send("Données en cours de chargement...")
+    if current_guess_game and current_guess_game.get("channel_id") == (target.channel_id if is_interaction else target.channel.id): 
         msg = "Un jeu est déjà en cours dans ce salon. `/jcp` pour abandonner."
-        if isinstance(target, discord.Interaction): await target.response.send_message(msg, ephemeral=True)
+        if is_interaction: await target.response.send_message(msg, ephemeral=True)
         else: await target.send(msg)
         return
         
-    if isinstance(target, discord.Interaction): await target.response.defer()
+    if is_interaction: await target.response.defer()
         
     pick = random.choice(all_pokemon_list); card = await fetch_pokemon_details(pick["id"], is_shiny=False)
     if not card: return
@@ -1006,14 +1029,13 @@ async def cmd_devine(target):
     
     random_move = random.choice(card.get("moves", [{"name": "Charge"}]))["name"]
     
-    current_guess_game = {"id": card["id"], "name": card["name_en"].lower(), "name_fr": card["name_fr"].lower(), "channel_id": (target.channel_id if isinstance(target, discord.Interaction) else target.channel.id), "hints": 0, "generation": card.get("generation", 1), "types": card.get("types", "Inconnu"), "random_move": random_move, "image_url": card.get("image_url")}
+    current_guess_game = {"id": card["id"], "name": card["name_en"].lower(), "name_fr": card["name_fr"].lower(), "channel_id": (target.channel_id if is_interaction else target.channel.id), "hints": 0, "generation": card.get("generation", 1), "types": card.get("types", "Inconnu"), "random_move": random_move, "image_url": card.get("image_url")}
     
     embed = discord.Embed(title="🔍 Quel est ce Pokémon ?", description="Devinez le nom (FR ou EN) en tapant dans le chat.\nUtilisez `/indice` (max 5) pour déflouter/obtenir un indice, ou `/jcp` pour abandonner.", color=discord.Color.blue())
-    embed.set_author(name=target.user.display_name if isinstance(target, discord.Interaction) else target.author.display_name, icon_url=target.user.display_avatar.url if isinstance(target, discord.Interaction) else target.author.display_avatar.url)
+    embed.set_author(name=target.user.display_name if is_interaction else target.author.display_name, icon_url=target.user.display_avatar.url if is_interaction else target.author.display_avatar.url)
     embed.set_image(url="attachment://pokemon_inconnu.png")
     
-    if isinstance(target, discord.Interaction): await target.followup.send(embed=embed, file=file)
-    else: await target.send(embed=embed, file=file)
+    await send_target.send(embed=embed, file=file)
 
 @bot.command()
 async def indice(ctx): await cmd_indice(ctx)
@@ -1022,19 +1044,22 @@ async def slash_indice(interaction: discord.Interaction): await cmd_indice(inter
 
 async def cmd_indice(target):
     global current_guess_game
-    channel_id = target.channel_id if isinstance(target, discord.Interaction) else target.channel.id
+    is_interaction = isinstance(target, discord.Interaction)
+    channel_id = target.channel_id if is_interaction else target.channel.id
+    send_target = target.followup if is_interaction else target
+
     if not current_guess_game or current_guess_game.get("channel_id") != channel_id: 
         msg = "Aucun jeu en cours ici."
-        if isinstance(target, discord.Interaction): await target.response.send_message(msg, ephemeral=True)
+        if is_interaction: await target.response.send_message(msg, ephemeral=True)
         else: await target.send(msg)
         return
     if current_guess_game["hints"] >= MAX_HINTS: 
         msg = "Plus d'indices disponibles."
-        if isinstance(target, discord.Interaction): await target.response.send_message(msg, ephemeral=True)
+        if is_interaction: await target.response.send_message(msg, ephemeral=True)
         else: await target.send(msg)
         return
     
-    if isinstance(target, discord.Interaction): await target.response.defer()
+    if is_interaction: await target.response.defer()
     
     current_guess_game["hints"] += 1; hint_num = current_guess_game["hints"]; pokemon_id = current_guess_game["id"]
     blur_levels = {1: 20, 2: 15, 3: 10, 4: 5, 5: 0}
@@ -1044,12 +1069,11 @@ async def cmd_indice(target):
     msg = hints_text.get(hint_num, "")
     
     embed = discord.Embed(title=f"💡 Indice #{hint_num}/{MAX_HINTS}", description=msg, color=discord.Color.orange())
-    embed.set_author(name=target.user.display_name if isinstance(target, discord.Interaction) else target.author.display_name, icon_url=target.user.display_avatar.url if isinstance(target, discord.Interaction) else target.author.display_avatar.url)
+    embed.set_author(name=target.user.display_name if is_interaction else target.author.display_name, icon_url=target.user.display_avatar.url if is_interaction else target.author.display_avatar.url)
     
     if file: embed.set_image(url="attachment://pokemon_inconnu.png")
     
-    if isinstance(target, discord.Interaction): await target.followup.send(embed=embed, file=file)
-    else: await target.send(embed=embed, file=file)
+    await send_target.send(embed=embed, file=file)
 
 @bot.command()
 async def tuprefere(ctx): await cmd_tuprefere(ctx)
@@ -1057,9 +1081,9 @@ async def tuprefere(ctx): await cmd_tuprefere(ctx)
 async def slash_tuprefere(interaction: discord.Interaction): await cmd_tuprefere(interaction)
 
 async def cmd_tuprefere(target):
-    # DÉBOGAGE: Gestion correcte du contexte pour la vue
     is_interaction = isinstance(target, discord.Interaction)
     channel_id = target.channel_id if is_interaction else target.channel.id
+    send_target = target.followup if is_interaction else target
     
     if channel_id in tu_prefere_games: 
         msg = "Un jeu est déjà en cours dans ce salon."
@@ -1074,15 +1098,13 @@ async def cmd_tuprefere(target):
     card1 = await fetch_pokemon_details(pids[0]["id"], is_shiny=False); card2 = await fetch_pokemon_details(pids[1]["id"], is_shiny=False)
     if not card1 or not card2: return
     
-    # Correction: La vue est initialisée avec l'objet de contexte/interaction correct
     view = TuPrefereView(target, card1, card2)
     tu_prefere_games[channel_id] = view
     
     user_mention = target.user.mention if is_interaction else target.author.mention
     msg = f"**{user_mention}**, choisis entre **{card1['name_fr']}** et **{card2['name_fr']}**."
     
-    if is_interaction: await target.followup.send(msg, embed=view.create_embed(), view=view)
-    else: await target.send(msg, embed=view.create_embed(), view=view)
+    await send_target.send(msg, embed=view.create_embed(), view=view)
 
 
 @bot.event
