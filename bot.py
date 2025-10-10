@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (Débogage Total V3)
+# bot.py - PokéDeck Version Finale (Débogage Total V4 - Anti-Blocage)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -662,7 +662,7 @@ async def cmd_carte(user, target):
         if isinstance(target, discord.Interaction): await target.response.send_message(msg); return
         else: await target.send(msg); return
     
-    # Correction: Defer uniquement si c'est un slash et la première réponse
+    # Correction: Defer uniquement si c'est un slash
     if isinstance(target, discord.Interaction) and not target.response.is_done(): 
         await target.response.defer()
 
@@ -770,8 +770,6 @@ async def cmd_deck(user, target, member):
     ud = user_decks.get(member_id, {"deck":[], "collection":[]}); deck = ud.get("deck", [])
     
     view = View(timeout=30)
-    
-    # Correction: pc_cb doit utiliser interaction.response.send_message
     async def pc_cb(interaction: discord.Interaction):
         if interaction.user.id != user.id: await interaction.response.send_message("Pas votre PC.", ephemeral=True); return
         pc_list = sorted(ud.get("collection", []), key=lambda c: (get_card_rarity_info(c).get("rank", 0), c.get("bst", 0)), reverse=True)
@@ -815,10 +813,10 @@ async def cmd_deck(user, target, member):
         else: embed.add_field(name=f"#{i+1}", value="(Vide)", inline=True)
             
     if member is None and len(ud.get("collection",[])) >= 6:
-        # Correction: La réponse au callback doit être une interaction response
         async def edit_cb(interaction: discord.Interaction):
             if interaction.user.id != user.id: await interaction.response.send_message("Pas votre deck.", ephemeral=True); return
             view_edit = DeckEditView(interaction, ud["collection"]) 
+            # Réponse éphémère pour la vue de sélection afin de ne pas spammer le salon
             await interaction.response.send_message(f"**PC/Collection:** Sélectionnez 6 cartes pour votre deck actif (Actuel: {len(view_edit.current_deck_indices)}/6)", view=view_edit, ephemeral=True)
             
         edit_btn = Button(label="🔄 Modifier le deck (PC)", style=discord.ButtonStyle.primary); pc_btn = Button(label="💻 Voir PC (Collection)", style=discord.ButtonStyle.secondary)
