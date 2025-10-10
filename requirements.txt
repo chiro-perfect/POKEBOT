@@ -1,4 +1,5 @@
+# requirements.txt
 discord.py>=2.3.2
 python-dotenv
 aiohttp
-Pillow
+Pillow==10.0.0  # Changement temporaire pour invalider le cache

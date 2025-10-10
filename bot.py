@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (V7 - Compatibilité UI Forcée)
+# bot.py - PokéDeck Version Finale (V7 - Code Moderne DÉFINITIF)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -327,10 +327,8 @@ class DeckEditView(View):
             label = f"{card.get('name_fr', '?')[:12]} ({card.get('bst', '?')})"
             is_shiny_mark = "🌟" if card.get("is_shiny") else ""
             btn_style = discord.ButtonStyle.primary if is_in_deck else get_button_style_for_rarity(rarity)
-            # Utilisation de make_card_cb pour la rétrocompatibilité (même si la syntaxe ci-dessous est V2+)
             btn = Button(label=f"{label}{is_shiny_mark}", style=btn_style, custom_id=f"deck_edit_{coll_idx}", emoji=emoji, row=i // 4, callback=self.make_card_cb(coll_idx)); self.add_item(btn)
 
-        # Utilisation de décorateurs pour les boutons de contrôle (Standard V2+)
         self.add_item(Button(label="⬅️ Précédent", custom_id="page_prev", disabled=self.page == 0, row=4, callback=self.page_prev_cb))
         self.add_item(Button(label=f"💾 Sauver ({len(self.current_deck_indices)}/6)", custom_id="deck_save", style=discord.ButtonStyle.success, disabled=len(self.current_deck_indices) != self.max_deck_size, row=4, callback=self.deck_save_cb))
         self.add_item(Button(label="Suivant ➡️", custom_id="page_next", disabled=end_index >= len(self.collection), row=4, callback=self.page_next_cb))
@@ -710,7 +708,7 @@ async def cmd_carte(user, target):
         
     reward, added_to_deck = add_card_to_collection(user.id, card)
     emoji = get_rarity_emoji(card.get("rarity_level","Commun")); embed = discord.Embed(title=f"🎴 {card['name_fr']} !", color=get_rarity_color(card.get("rarity_level","Commun")))
-    embed.set_thumbnail(url=card.get("image_url")); embed.add_field(name="Rareté", value=f"{emoji} {card.get("rarity_level")}", inline=True)
+    embed.set_thumbnail(url=card.get("image_url")); embed.add_field(name="Rareté", value=f"{emoji} {card.get('rarity_level')}", inline=True)
     embed.add_field(name="BST", value=str(card.get("bst","?")), inline=True); embed.add_field(name="Gain", value=f"**+ ₽{reward}**", inline=True)
     msg = f"**{card['name_fr']}** tiré. "; 
     if not added_to_deck: msg += f"\n(Ajouté à votre **PC/Collection**. Deck actif plein.)"
@@ -769,10 +767,9 @@ async def bigdeck(ctx): await cmd_bigdeck(ctx.author, ctx)
 async def slash_bigdeck(interaction: discord.Interaction): await cmd_bigdeck(interaction.user, interaction)
 
 async def cmd_bigdeck(user, target):
-    uid = user.id; ud = user_decks.setdefault(uid, {"deck":[], "collection":[], "pokedollars": 0, "last_bigdeck":0, "best_card":None}); now = time.time()
-    if now - ud.get("last_bigdeck",0) < BIGDECK_COOLDOWN:
-        rem = BIGDECK_COOLDOWN - (now - ud["last_bigdeck"]); h = int(rem//3600); m = int((rem%3600)//60)
-        msg = f"⏳ Recharge dans {h}h{m}m."
+    uid = user.id; ud = user_decks.setdefault(uid, {"deck":[], "collection":[]}); cost = ECONOMY["BOOSTER_COST"]
+    if ud.get("pokedollars", 0) < cost: 
+        msg = f"❌ Vous n'avez pas assez de Pokédollars. Coût: **₽{cost}**."
         if isinstance(target, discord.Interaction): await target.response.send_message(msg, ephemeral=True)
         else: await target.send(msg)
         return
@@ -1067,7 +1064,8 @@ async def cmd_devine(target):
         if not card: return await send_target.send("Erreur lors de la récupération des détails du Pokémon. L'API est peut-être lente.")
         
         file = await get_blurred_sprite_file(card["id"], is_shiny=False, blur_level=25)
-        if not file: return await send_target.send("Erreur lors de la création de l'image floue.")
+        # L'erreur de l'image floue est probable ici si Pillow ne fonctionne pas bien.
+        if not file: return await send_target.send("Erreur lors de la création de l'image floue (vérifiez Pillow).")
         
         random_move = random.choice(card.get("moves", [{"name": "Charge"}]))["name"]
         
