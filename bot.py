@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (Anti-Blocage Sûr)
+# bot.py - PokéDeck Version Finale (Débogage Total V4 - Stabilité Maximale)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -657,7 +657,6 @@ async def carte(ctx): await cmd_carte(ctx.author, ctx)
 async def slash_carte(interaction: discord.Interaction): await cmd_carte(interaction.user, interaction)
 
 async def cmd_carte(user, target):
-    # DÉBUG STABILITÉ: Assure que la liste Pokémon est chargée
     if not all_pokemon_list: 
         msg = "Données en cours de chargement..."
         if isinstance(target, discord.Interaction): await target.response.send_message(msg); return
@@ -1020,24 +1019,29 @@ async def cmd_devine(target):
         else: await target.send(msg)
         return
         
-    # Correction: Defer si interaction
     if is_interaction: await target.response.defer()
+    
+    try:
+        # --- LOGIQUE CRITIQUE ---
+        pick = random.choice(all_pokemon_list); card = await fetch_pokemon_details(pick["id"], is_shiny=False)
+        if not card: return await send_target.send("Erreur lors de la récupération des détails du Pokémon.")
         
-    pick = random.choice(all_pokemon_list); card = await fetch_pokemon_details(pick["id"], is_shiny=False)
-    if not card: return
-    
-    file = await get_blurred_sprite_file(card["id"], is_shiny=False, blur_level=25)
-    if not file: return
-    
-    random_move = random.choice(card.get("moves", [{"name": "Charge"}]))["name"]
-    
-    current_guess_game = {"id": card["id"], "name": card["name_en"].lower(), "name_fr": card["name_fr"].lower(), "channel_id": (target.channel_id if is_interaction else target.channel.id), "hints": 0, "generation": card.get("generation", 1), "types": card.get("types", "Inconnu"), "random_move": random_move, "image_url": card.get("image_url")}
-    
-    embed = discord.Embed(title="🔍 Quel est ce Pokémon ?", description="Devinez le nom (FR ou EN) en tapant dans le chat.\nUtilisez `/indice` (max 5) pour déflouter/obtenir un indice, ou `/jcp` pour abandonner.", color=discord.Color.blue())
-    embed.set_author(name=target.user.display_name if is_interaction else target.author.display_name, icon_url=target.user.display_avatar.url if is_interaction else target.author.display_avatar.url)
-    embed.set_image(url="attachment://pokemon_inconnu.png")
-    
-    await send_target.send(embed=embed, file=file)
+        file = await get_blurred_sprite_file(card["id"], is_shiny=False, blur_level=25)
+        if not file: return await send_target.send("Erreur lors de la création de l'image floue.")
+        
+        random_move = random.choice(card.get("moves", [{"name": "Charge"}]))["name"]
+        
+        current_guess_game = {"id": card["id"], "name": card["name_en"].lower(), "name_fr": card["name_fr"].lower(), "channel_id": (target.channel_id if is_interaction else target.channel.id), "hints": 0, "generation": card.get("generation", 1), "types": card.get("types", "Inconnu"), "random_move": random_move, "image_url": card.get("image_url")}
+        
+        embed = discord.Embed(title="🔍 Quel est ce Pokémon ?", description="Devinez le nom (FR ou EN) en tapant dans le chat.\nUtilisez `/indice` (max 5) pour déflouter/obtenir un indice, ou `/jcp` pour abandonner.", color=discord.Color.blue())
+        embed.set_author(name=target.user.display_name if is_interaction else target.author.display_name, icon_url=target.user.display_avatar.url if is_interaction else target.author.display_avatar.url)
+        embed.set_image(url="attachment://pokemon_inconnu.png")
+        
+        await send_target.send(embed=embed, file=file)
+        
+    except Exception as e:
+        print(f"Erreur fatale dans cmd_devine: {e}")
+        await send_target.send(f"Une erreur inattendue est survenue lors du lancement du jeu. (Erreur: {e})")
 
 @bot.command()
 async def indice(ctx): await cmd_indice(ctx)
@@ -1096,17 +1100,22 @@ async def cmd_tuprefere(target):
     
     if is_interaction: await target.response.defer()
     
-    pids = random.sample(all_pokemon_list, 2)
-    card1 = await fetch_pokemon_details(pids[0]["id"], is_shiny=False); card2 = await fetch_pokemon_details(pids[1]["id"], is_shiny=False)
-    if not card1 or not card2: return
-    
-    view = TuPrefereView(target, card1, card2)
-    tu_prefere_games[channel_id] = view
-    
-    user_mention = target.user.mention if is_interaction else target.author.mention
-    msg = f"**{user_mention}**, choisis entre **{card1['name_fr']}** et **{card2['name_fr']}**."
-    
-    await send_target.send(msg, embed=view.create_embed(), view=view)
+    try:
+        pids = random.sample(all_pokemon_list, 2)
+        card1 = await fetch_pokemon_details(pids[0]["id"], is_shiny=False); card2 = await fetch_pokemon_details(pids[1]["id"], is_shiny=False)
+        if not card1 or not card2: return await send_target.send("Erreur: Impossible de récupérer les détails des cartes.")
+        
+        view = TuPrefereView(target, card1, card2)
+        tu_prefere_games[channel_id] = view
+        
+        user_mention = target.user.mention if is_interaction else target.author.mention
+        msg = f"**{user_mention}**, choisis entre **{card1['name_fr']}** et **{card2['name_fr']}**."
+        
+        await send_target.send(msg, embed=view.create_embed(), view=view)
+
+    except Exception as e:
+        print(f"Erreur fatale dans cmd_tuprefere: {e}")
+        await send_target.send(f"Une erreur inattendue est survenue lors du lancement du jeu. (Erreur: {e})")
 
 
 @bot.event
