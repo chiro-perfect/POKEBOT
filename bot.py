@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (V9 - Résolution Définitive des Vues)
+# bot.py - PokéDeck Version Finale (V10 - Stabilité UI Absolue)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -369,9 +369,8 @@ class CardSelectionView(View):
         super().__init__(timeout=timeout); self.user_id = user_id; self.deck = deck[:6]; self.num_cards_required = num_cards_required; self.selected = []; self.confirmed = False
         for i, card in enumerate(self.deck):
             label = f"#{i+1} {card.get('name_fr','?')[:18]}"; emoji = get_rarity_emoji(card.get("rarity_level","Commun"))
-            # Correction: Utilisation de make_cb(i) pour assigner le callback
             btn = Button(label=f"{emoji} {label}", style=discord.ButtonStyle.secondary, custom_id=f"cs_{i}"); btn.callback = self.make_cb(i); self.add_item(btn)
-        confirm_btn = Button(label=f"✅ Confirmer (0/{self.num_cards_required})", style=discord.ButtonStyle.success, custom_id="cs_confirm", callback=self.confirm_cb); self.add_item(confirm_btn)
+        confirm_btn = Button(label=f"✅ Confirmer (0/{self.num_cards_required})", style=discord.ButtonStyle.success, custom_id="cs_confirm"); confirm_btn.callback = self.confirm_cb; self.add_item(confirm_btn)
         self._update_confirm_button()
 
     def _update_confirm_button(self):
@@ -835,7 +834,7 @@ async def cmd_carte(user, target):
         
     reward, added_to_deck = add_card_to_collection(user.id, card)
     emoji = get_rarity_emoji(card.get("rarity_level","Commun")); embed = discord.Embed(title=f"🎴 {card['name_fr']} !", color=get_rarity_color(card.get("rarity_level","Commun")))
-    embed.set_thumbnail(url=card.get("image_url")); embed.add_field(name="Rareté", value=f"{emoji} {card.get('rarity_level')}", inline=True)
+    embed.set_thumbnail(url=card.get("image_url")); embed.add_field(name="Rareté", value=f"{emoji} {card.get("rarity_level")}", inline=True)
     embed.add_field(name="BST", value=str(card.get("bst","?")), inline=True); embed.add_field(name="Gain", value=f"**+ ₽{reward}**", inline=True)
     msg = f"**{card['name_fr']}** tiré. "; 
     if not added_to_deck: msg += f"\n(Ajouté à votre **PC/Collection**. Deck actif plein.)"
