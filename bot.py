@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (Slash & Prefixe)
+# bot.py - PokéDeck Version Finale (Syntaxe Corrigée)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -68,7 +68,7 @@ intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
-# Suppression de 'tree = discord.app_commands.CommandTree(bot)' pour utiliser bot.tree par défaut.
+# Utilise bot.tree pour les commandes slash
 
 user_decks = {}
 all_pokemon_list = []
@@ -352,8 +352,10 @@ class EnergyAttackSelectView(View):
     async def pass_cb(self, interaction: discord.Interaction):
         if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre tour.", ephemeral=True); return
         for item in self.children: item.disabled = True
-        try: await interaction.response.edit_message(view=self)
-            except: pass
+        try: 
+            await interaction.response.edit_message(view=self)
+        except: 
+            pass
         await self.manager.handle_move(self.user_id, -1, is_pass=True); self.stop()
 
     async def on_timeout(self): await self.manager.handle_timeout(self.user_id)
