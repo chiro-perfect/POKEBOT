@@ -152,7 +152,8 @@ def calculate_bst(stats): return sum(s.get("base_stat", 0) for s in stats)
 
 async def fetch_pokemon_moves(pokemon_id):
     try:
-        async with aiohttp.ClientSession() as session:
+        # TIMEOUT AJOUTÉ
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
             async with session.get(f"{POKEAPI_BASE_URL}/pokemon/{pokemon_id}") as resp:
                 if resp.status != 200: return []
                 data = await resp.json()
@@ -164,7 +165,7 @@ async def fetch_pokemon_moves(pokemon_id):
             for m in random.sample(candidates, min(len(candidates), 8)):
                 name_en = m["move"]["name"].replace("-", " ").capitalize()
                 try:
-                    async with aiohttp.ClientSession() as s2:
+                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=3)) as s2:
                         async with s2.get(m["move"]["url"]) as r:
                             if r.status == 200: name_fr = next((n["name"] for n in (await r.json()).get("names",[]) if n["language"]["name"]=="fr"), name_en)
                             else: name_fr = name_en
@@ -178,14 +179,30 @@ async def fetch_pokemon_moves(pokemon_id):
         return [{"name":"Charge","power":50, "cost": {"Normal": 1}}]
 
 async def fetch_pokemon_details(pokemon_id, is_shiny=False):
+    """ Récupère les détails d'un Pokémon, avec gestion stricte des erreurs et timeouts. """
+    url_pokemon = f"{POKEAPI_BASE_URL}/pokemon/{pokemon_id}"
+    url_species = f"{POKEAPI_BASE_URL}/pokemon-species/{pokemon_id}"
+    
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{POKEAPI_BASE_URL}/pokemon/{pokemon_id}") as r1:
-                if r1.status != 200: return None; pdata = await r1.json()
-            async with aiohttp.ClientSession() as session2:
-                async with session2.get(f"{POKEAPI_BASE_URL}/pokemon-species/{pokemon_id}") as r2:
-                    sdata = await r2.json() if r2.status == 200 else {}
+        # TIMEOUT RAISONNABLE POUR L'HÉBERGEMENT
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
             
+            # --- FETCH POKEMON DATA ---
+            async with session.get(url_pokemon) as r1:
+                if r1.status != 200: 
+                    print(f"Erreur API (Pokemon {pokemon_id}): Statut {r1.status}")
+                    return None
+                pdata = await r1.json()
+
+            # --- FETCH SPECIES DATA ---
+            async with session.get(url_species) as r2:
+                if r2.status != 200:
+                    print(f"Erreur API (Species {pokemon_id}): Statut {r2.status}")
+                    sdata = {} # Pas fatal
+                else:
+                    sdata = await r2.json()
+
+            # --- TRAITEMENT DES DONNÉES ---
             bst = calculate_bst(pdata.get("stats", []))
             rarity_level = next((name for name, info in sorted(RARITIES.items(), key=lambda x: -x[1]["min_bst"]) if name != "Chrome" and bst >= info.get("min_bst", 0)), "Commun")
             image_url = pdata["sprites"].get("front_shiny") if is_shiny else pdata["sprites"].get("front_default")
@@ -205,7 +222,16 @@ async def fetch_pokemon_details(pokemon_id, is_shiny=False):
             stats_dict.setdefault("hp", stats_dict.get("hp", 50)); stats_dict.setdefault("attack", stats_dict.get("attack", 10)); stats_dict.setdefault("defense", stats_dict.get("defense", 10))
 
             return {"id": pdata.get("id"), "name_en": pdata.get("name","").capitalize(), "name_fr": name_fr, "bst": bst, "rarity_level": "Chrome" if is_shiny else rarity_level, "image_url": image_url, "is_shiny": is_shiny, "types": types, "stats": stats_text, "stats_dict": stats_dict, "moves": moves, "evolution_chain_url": sdata.get("evolution_chain", {}).get("url"), "evolution_stage": 0, "evolution_limit": 2, "last_evolution": 0, "last_draw": 0, "generation": generation_roman}
-    except Exception as e: return None
+
+    except asyncio.TimeoutError:
+        print(f"Erreur: Timeout général lors de la requête pour l'ID {pokemon_id}.")
+        return None
+    except aiohttp.ClientError as e:
+        print(f"Erreur Client AIOHTTP pour l'ID {pokemon_id}: {e}")
+        return None
+    except Exception as e: 
+        print(f"Erreur Inattendue dans fetch_pokemon_details pour l'ID {pokemon_id}: {e}")
+        return None
 
 async def load_all_pokemon():
     global all_pokemon_list
@@ -636,7 +662,8 @@ class DeckDuelManager:
 async def on_ready():
     print("✅ Bot prêt:", bot.user)
     load_user_decks()
-    bot.loop.create_task(load_all_pokemon())
+    # La liste est chargée en tâche de fond
+    bot.loop.create_task(load_all_pokemon()) 
     
     await bot.tree.sync()
     print("✅ Commandes Slash synchronisées.")
@@ -651,7 +678,7 @@ async def slash_help(interaction: discord.Interaction):
 
 async def send_help_embed(target):
     embed = discord.Embed(title="🤖 PokéBot — Aide (Slash & Prefix)", description="Toutes les commandes fonctionnent avec `/` ou `!`", color=discord.Color.blue())
-    embed.add_field(name="💼 Collection & Économie (₽)", value="`/carte` ou `!carte` — Tire une carte (gain ₽)\n`/booster` ou `!booster` — Pioche 5 cartes (coût ₽)\n`/deck` ou `!deck` — Affiche ton deck actif / **Modifier** (PC)\n`/solde` ou `!solde` — Taux d'obtention de Shinies (0.1%)\n`/solde` ou `!solde` — Affiche tes Pokédollars (₽)", inline=False)
+    embed.add_field(name="💼 Collection & Économie (₽)", value="`/carte` ou `!carte` — Tire une carte (gain ₽)\n`/booster` ou `!booster` — Pioche 5 cartes (coût ₽)\n`/deck` ou `!deck` — Affiche ton deck actif / **Modifier** (PC)\n`/solde` ou `!solde` — Affiche tes Pokédollars (₽)", inline=False)
     embed.add_field(name="⚔️ Évolution & Duels", value="`/evolve [slot]` — Défi **Eau/Feu/Plante** pour évolution (coût/gain ₽)\n`/pfc [choix]` — Joue au défi évolution\n`/deckduel @user` — Duel stratégique (**Système d'Énergie**, gain ₽)", inline=False)
     embed.add_field(name="🎲 Mini-jeux", value="`/devine` — Quel est ce Pokémon ?\n`/indice` — Défloutage progressif\n`/tuprefere` — Choisis entre deux Pokémon", inline=False)
     
@@ -677,7 +704,7 @@ async def cmd_carte(user, target):
     
     is_shiny = random.random() < RARITIES["Chrome"]["chance"]; pid = random.choice(all_pokemon_list)["id"]; card = await fetch_pokemon_details(pid, is_shiny=is_shiny)
     if not card: 
-        msg = "Erreur lors du tirage de la carte. Réessayez."
+        msg = "Erreur lors du tirage de la carte. L'API est peut-être inaccessible. Réessayez."
         if isinstance(target, discord.Interaction): await target.followup.send(msg); return
         else: await target.send(msg); return
         
