@@ -290,13 +290,77 @@ async def get_blurred_sprite_file(pokemon_id, is_shiny=False, blur_level=18):
         # Encodage de l'image floutée en PNG pour l'envoi
         _, buffer = cv2.imencode('.png', blurred)
         
-        output_buffer = io.BytesIO(buffer)
+        output_buffer = io.BytesIO(buffer.tobytes())
         return discord.File(output_buffer, filename="pokemon_inconnu.png")
         
     except Exception as e:
         # C'est ici que l'erreur Pillow ou CV2 se produit souvent.
         print(f"Échec de la création du sprite flou (CV2/Image): {e}")
         return None 
+        
+# NOUVELLE FONCTION: Combine deux images pour /tuprefere
+async def combine_tuprefere_images(card1, card2):
+    """Télécharge, combine horizontalement deux sprites avec leurs noms pour /tuprefere."""
+    
+    # Récupérer les données binaires des images
+    urls = [card1['image_url'], card2['image_url']]
+    
+    # Utilise gather pour les requêtes HTTP (plus rapide)
+    async with aiohttp.ClientSession() as session:
+        responses = await asyncio.gather(*(session.get(url).read() for url in urls))
+
+    images = []
+    
+    # Processus de redimensionnement et fusion
+    for data in responses:
+        nparr = np.frombuffer(data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
+        
+        # Gestion de l'alpha channel si manquant
+        if img.shape[2] == 3:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
+        
+        img = cv2.resize(img, (128, 128), interpolation=cv2.INTER_LINEAR)
+        images.append(img)
+        
+    # Définition des dimensions finales
+    width = images[0].shape[1]
+    sprite_height = images[0].shape[0]
+    total_width = width * 2
+    base_image_height = sprite_height + 40 # Espace pour les noms (40px)
+    
+    # Crée un fond blanc (ou transparent)
+    final_img = np.full((base_image_height, total_width, 4), 255, dtype=np.uint8)
+    
+    # Fusion des images côte à côte
+    combined_sprites = np.hstack(images)
+    final_img[0:sprite_height, 0:total_width] = combined_sprites # Place les sprites en haut
+    
+    # Ajout du texte des noms
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.5
+    font_thickness = 1
+    font_color = (0, 0, 0, 255) # Noir
+
+    # Fonction pour ajouter le texte au milieu de l'espace de nom
+    def add_text_shadow(img, text, x, y):
+        # Utiliser l'ombrage pour rendre le texte visible
+        cv2.putText(img, text, (x + 1, y + 1), font, font_scale, (100, 100, 100, 255), font_thickness, cv2.LINE_AA)
+        cv2.putText(img, text, (x, y), font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+
+    # Nom 1
+    text1 = card1['name_fr'][:12]
+    add_text_shadow(final_img, text1, width // 2 - (len(text1) * 5), sprite_height + 25)
+    
+    # Nom 2
+    text2 = card2['name_fr'][:12]
+    add_text_shadow(final_img, text2, total_width - width // 2 - (len(text2) * 5), sprite_height + 25)
+
+    # Encodage en PNG
+    _, buffer = cv2.imencode('.png', final_img)
+    output_buffer = io.BytesIO(buffer.tobytes())
+    
+    return discord.File(output_buffer, filename="tuprefere_combined.png")
 
 # ----------------- VUES (UI) -----------------
 
@@ -317,7 +381,7 @@ class CardSelectionView(View):
 
     def make_cb(self, idx):
         async def cb(interaction: discord.Interaction):
-            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre sélection.", ephemeral=True); return
+            if interaction.user.id != self.user_id: await interaction.response.send_message("Ce n'est pas votre sélection.", ephemeral=True); return
             if idx in self.selected: self.selected.remove(idx)
             else:
                 if len(self.selected) >= self.num_cards_required: await interaction.response.send_message(f"Max {self.num_cards_required} cartes.", ephemeral=True); return
@@ -519,42 +583,45 @@ class TuPrefereView(View):
 
     def _add_buttons(self):
         # Utilise la méthode décorée pour s'assurer que 'callback' n'est jamais un argument du constructeur
-        pass # Les boutons sont ajoutés via les décorateurs @discord.ui.button
+        # Bouton 1: Choisir c1
+        @discord.ui.button(label=f"Choisir {self.cards[0]['name_fr']}", style=discord.ButtonStyle.primary, custom_id="tp_0", row=0)
+        async def select_card_0(self, interaction: discord.Interaction, button: Button):
+            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
+            self.current_selection = 0
+            self.update_buttons()
+            embed = self.create_embed()
+            await interaction.response.edit_message(embed=embed, view=self, attachments=[])
 
-    @discord.ui.button(label="Choisir Carte 1", style=discord.ButtonStyle.primary, custom_id="tp_0", row=0)
-    async def select_card_0(self, interaction: discord.Interaction, button: Button):
-        if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
-        self.current_selection = 0
-        self.update_buttons()
-        embed = self.create_embed()
-        await interaction.response.edit_message(embed=embed, view=self)
+        # Bouton 2: Choisir c2
+        @discord.ui.button(label=f"Choisir {self.cards[1]['name_fr']}", style=discord.ButtonStyle.secondary, custom_id="tp_1", row=0)
+        async def select_card_1(self, interaction: discord.Interaction, button: Button):
+            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
+            self.current_selection = 1
+            self.update_buttons()
+            embed = self.create_embed()
+            await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+            
+        @discord.ui.button(label=f"🔄 Changer l'Autre", style=discord.ButtonStyle.secondary, row=1, custom_id="tp_change")
+        async def change_cb(self, interaction: discord.Interaction, button: Button):
+            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
+            await interaction.response.defer()
+            card_to_keep = self.cards[self.current_selection]; new_card = await self.draw_new_card(card_to_keep); self.cards[1-self.current_selection] = new_card
+            self.update_buttons(); embed = self.create_embed()
+            
+            # Recrée le fichier combiné
+            file = await combine_tuprefere_images(self.cards[0], self.cards[1])
+            await interaction.edit_original_response(embed=embed, view=self, attachments=[file])
 
-    @discord.ui.button(label="Choisir Carte 2", style=discord.ButtonStyle.secondary, custom_id="tp_1", row=0)
-    async def select_card_1(self, interaction: discord.Interaction, button: Button):
-        if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
-        self.current_selection = 1
-        self.update_buttons()
-        embed = self.create_embed()
-        await interaction.response.edit_message(embed=embed, view=self)
-        
-    @discord.ui.button(label="🔄 Changer l'Autre", style=discord.ButtonStyle.secondary, row=1, custom_id="tp_change")
-    async def change_cb(self, interaction: discord.Interaction, button: Button):
-        if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
-        await interaction.response.defer()
-        card_to_keep = self.cards[self.current_selection]; new_card = await self.draw_new_card(card_to_keep); self.cards[1-self.current_selection] = new_card
-        self.update_buttons(); embed = self.create_embed()
-        await interaction.edit_original_response(embed=embed, view=self)
-
-    @discord.ui.button(label="✅ Garder et Finir", style=discord.ButtonStyle.success, row=1, custom_id="tp_finish")
-    async def finish_cb(self, interaction: discord.Interaction, button: Button):
-        if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
-        chosen_card = self.cards[self.current_selection]; reward, added_to_deck = add_card_to_collection(self.user_id, chosen_card)
-        msg = f"🎉 **{interaction.user.mention}** a choisi **{chosen_card['name_fr']}** ! Carte ajoutée à votre collection. **+ ₽{reward}**."
-        if not added_to_deck: msg += f"\n(Deck actif plein.)"
-        await interaction.response.edit_message(content=msg, embed=None, view=None, attachments=[]); 
-        
-        channel_id = self.ctx.channel_id if isinstance(self.ctx, discord.Interaction) else self.ctx.channel.id
-        tu_prefere_games.pop(channel_id, None); self.stop()
+        @discord.ui.button(label="✅ Garder et Finir", style=discord.ButtonStyle.success, row=1, custom_id="tp_finish")
+        async def finish_cb(self, interaction: discord.Interaction, button: Button):
+            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
+            chosen_card = self.cards[self.current_selection]; reward, added_to_deck = add_card_to_collection(self.user_id, chosen_card)
+            msg = f"🎉 **{interaction.user.mention}** a choisi **{chosen_card['name_fr']}** ! Carte ajoutée à votre collection. **+ ₽{reward}**."
+            if not added_to_deck: msg += f"\n(Deck actif plein.)"
+            await interaction.response.edit_message(content=msg, embed=None, view=None, attachments=[])
+            
+            channel_id = self.ctx.channel_id if isinstance(self.ctx, discord.Interaction) else self.ctx.channel.id
+            tu_prefere_games.pop(channel_id, None); self.stop()
 
     def update_buttons(self):
         # Met à jour les labels et styles des boutons après une sélection/changement
@@ -578,9 +645,12 @@ class TuPrefereView(View):
     
     def create_embed(self):
         c1, c2 = self.cards; chosen = self.cards[self.current_selection]; opponent = self.cards[1-self.current_selection]
-        embed = discord.Embed(title="❓ Tu Préfères... ?", description=f"**{c1['name_fr']}** ({c1.get('bst', '?')}) vs **{c2['name_fr']}** ({c2.get('bst', '?')})", color=discord.Color.blurple())
-        embed.add_field(name="Sélection Actuelle:", value=f"✅ **{chosen['name_fr']}**", inline=False)
-        embed.set_image(url=chosen["image_url"]); embed.set_thumbnail(url=opponent["image_url"])
+        
+        embed = discord.Embed(title="❓ Tu Préfères... ?", description=f"Choisissez le Pokémon à conserver ! Le gagnant est ajouté à votre collection.", color=discord.Color.blurple())
+        
+        # L'image combinée est envoyée en tant que fichier joint (URL temporaire)
+        embed.set_image(url="attachment://tuprefere_combined.png")
+        embed.set_footer(text=f"Sélection actuelle : {chosen['name_fr']}")
         return embed
 
     async def on_timeout(self): 
@@ -831,13 +901,13 @@ async def cmd_bigdeck(user, target):
     
     candidate = random.choice(all_pokemon_list); card = await fetch_pokemon_details(candidate["id"], is_shiny=(random.random() < RARITIES["Chrome"]["chance"]))
     if not card: return
-    session = {"current_card": card, "attempts": BIGDECK_REROLLS, "start": now}; bigdeck_sessions[uid] = session
+    session = {"current_card": card, "attempts": BIGDECK_REROLLS, "start": time.time()}; bigdeck_sessions[uid] = session
     file = await get_blurred_sprite_file(card["id"], is_shiny=card.get("is_shiny",False), blur_level=14)
     rarity_info = get_card_rarity_info(card)
     
     embed = discord.Embed(title="✨ BigDeck Quotidien ✨", description=f"BST: {card.get('bst','?')} — {rarity_info.get('emoji')} {rarity_info.get('rarity_level')}\nRerolls: {session['attempts']}", color=rarity_info.get("color"))
     embed.set_image(url="attachment://pokemon_inconnu.png")
-    view = BigDeckView(uid, session); user_decks[uid]["last_bigdeck"] = now; save_user_decks()
+    view = BigDeckView(uid, session); user_decks[uid]["last_bigdeck"] = time.time(); save_user_decks()
     
     if isinstance(target, discord.Interaction):
         await target.followup.send(embed=embed, file=file, view=view)
@@ -1209,13 +1279,18 @@ async def cmd_tuprefere(target):
         card1 = await fetch_pokemon_details(pids[0]["id"], is_shiny=False); card2 = await fetch_pokemon_details(pids[1]["id"], is_shiny=False)
         if not card1 or not card2: return await send_target.send("Erreur: Impossible de récupérer les détails des cartes.")
         
+        # Correction: Création de l'image combinée avec les noms
+        file = await combine_tuprefere_images(card1, card2)
+
         view = TuPrefereView(target, card1, card2)
         tu_prefere_games[channel_id] = view
         
         user_mention = target.user.mention if is_interaction else target.author.mention
-        msg = f"**{user_mention}**, choisis entre **{card1['name_fr']}** et **{card2['name_fr']}**."
+        msg = f"**{user_mention}**, choisis entre **{card1['name_fr']}** (1) et **{card2['name_fr']}** (2)."
         
-        await send_target.send(msg, embed=view.create_embed(), view=view)
+        embed = view.create_embed()
+        
+        await send_target.send(msg, embed=embed, file=file, view=view)
 
     except Exception as e:
         print(f"Erreur fatale dans cmd_tuprefere: {e}")
