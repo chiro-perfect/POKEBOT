@@ -841,7 +841,7 @@ async def pfc(ctx, choice: str): await cmd_pfc(ctx.author, ctx, choice)
     discord.app_commands.Choice(name="Plante", value="plante"),
 ])
 @discord.app_commands.describe(choice="Votre choix : Eau, Feu ou Plante.")
-async def slash_pfc(interaction: discord.Interaction, choice: discord.app_commands.Choice): await cmd_pfc(interaction.user, interaction, choice.value)
+async def slash_pfc(interaction: discord.Interaction, choice: str): await cmd_pfc(interaction.user, interaction, choice)
 
 async def cmd_pfc(user, target, choice: str):
     uid = user.id; choices_map = {"eau": "💧", "feu": "🔥", "plante": "🌿"}
