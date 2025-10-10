@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (V8 - Stabilité Maximale Forcée)
+# bot.py - PokéDeck Version Finale (V9 - Chiffres Romains Stricts)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -316,7 +316,7 @@ async def combine_tuprefere_images(card1, card2):
         nparr = np.frombuffer(data, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
         
-        # Gestion de l'alpha channel si manquant
+        # Redimensionnement standard à 128x128
         if img.shape[2] == 3:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2BGRA)
         
@@ -582,7 +582,6 @@ class TuPrefereView(View):
         self._add_buttons() # Utilise la méthode décorée
 
     def _add_buttons(self):
-        # Utilise la méthode décorée pour s'assurer que 'callback' n'est jamais un argument du constructeur
         # Bouton 1: Choisir c1
         @discord.ui.button(label=f"Choisir {self.cards[0]['name_fr']}", style=discord.ButtonStyle.primary, custom_id="tp_0", row=0)
         async def select_card_0(self, interaction: discord.Interaction, button: Button):
@@ -590,7 +589,9 @@ class TuPrefereView(View):
             self.current_selection = 0
             self.update_buttons()
             embed = self.create_embed()
-            await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+            # Envoie la nouvelle version de l'image combinée avec la réponse d'édition
+            file = await combine_tuprefere_images(self.cards[0], self.cards[1])
+            await interaction.response.edit_message(embed=embed, view=self, attachments=[file])
 
         # Bouton 2: Choisir c2
         @discord.ui.button(label=f"Choisir {self.cards[1]['name_fr']}", style=discord.ButtonStyle.secondary, custom_id="tp_1", row=0)
@@ -599,7 +600,9 @@ class TuPrefereView(View):
             self.current_selection = 1
             self.update_buttons()
             embed = self.create_embed()
-            await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+            # Envoie la nouvelle version de l'image combinée avec la réponse d'édition
+            file = await combine_tuprefere_images(self.cards[0], self.cards[1])
+            await interaction.response.edit_message(embed=embed, view=self, attachments=[file])
             
         @discord.ui.button(label=f"🔄 Changer l'Autre", style=discord.ButtonStyle.secondary, row=1, custom_id="tp_change")
         async def change_cb(self, interaction: discord.Interaction, button: Button):
@@ -1279,7 +1282,7 @@ async def cmd_tuprefere(target):
         card1 = await fetch_pokemon_details(pids[0]["id"], is_shiny=False); card2 = await fetch_pokemon_details(pids[1]["id"], is_shiny=False)
         if not card1 or not card2: return await send_target.send("Erreur: Impossible de récupérer les détails des cartes.")
         
-        # Correction: Création de l'image combinée avec les noms
+        # Création de l'image combinée avec les noms
         file = await combine_tuprefere_images(card1, card2)
 
         view = TuPrefereView(target, card1, card2)
