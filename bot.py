@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (Débogage Total)
+# bot.py - PokéDeck Version Finale (Débogage Total V2)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -655,7 +655,7 @@ async def slash_carte(interaction: discord.Interaction): await cmd_carte(interac
 async def cmd_carte(user, target):
     if not all_pokemon_list: await target.response.send_message("Données en cours de chargement...") if isinstance(target, discord.Interaction) else target.send("Données en cours de chargement..."); return
     
-    # Si c'est un slash, on defer d'abord
+    # Correction: Defer seulement si c'est un slash
     if isinstance(target, discord.Interaction): await target.response.defer()
 
     is_shiny = random.random() < RARITIES["Chrome"]["chance"]; pid = random.choice(all_pokemon_list)["id"]; card = await fetch_pokemon_details(pid, is_shiny=is_shiny)
@@ -752,12 +752,10 @@ async def deck(ctx, member: discord.Member = None): await cmd_deck(ctx.author, c
 @bot.tree.command(name="deck", description="Affiche votre deck actif et permet de le modifier (PC).")
 @discord.app_commands.describe(member="Utilisateur dont vous voulez voir le deck.")
 async def slash_deck(interaction: discord.Interaction, member: discord.Member = None): 
-    # Defer l'interaction avant l'action longue
     await interaction.response.defer()
     await cmd_deck(interaction.user, interaction, member)
 
 async def cmd_deck(user, target, member):
-    # La logique ici doit gérer target comme un Context OU une Interaction (déjà defer)
     member_id = member.id if member else user.id
     target_display = member.display_name if member else user.display_name
     
@@ -811,8 +809,8 @@ async def cmd_deck(user, target, member):
             if interaction.user.id != user.id: await interaction.response.send_message("Pas votre deck.", ephemeral=True); return
             # Passage de l'interaction à la vue pour qu'elle puisse fonctionner correctement
             view_edit = DeckEditView(interaction, ud["collection"]) 
+            # Réponse éphémère pour la vue de sélection afin de ne pas spammer le salon
             await interaction.response.send_message(f"**PC/Collection:** Sélectionnez 6 cartes pour votre deck actif (Actuel: {len(view_edit.current_deck_indices)}/6)", view=view_edit, ephemeral=True)
-            # Pas besoin de view.stop() ici, car l'interaction de base est déjà defer/terminée.
             
         edit_btn = Button(label="🔄 Modifier le deck (PC)", style=discord.ButtonStyle.primary); pc_btn = Button(label="💻 Voir PC (Collection)", style=discord.ButtonStyle.secondary)
         edit_btn.callback = edit_cb; pc_btn.callback = pc_cb; view.add_item(edit_btn); view.add_item(pc_btn)
@@ -840,20 +838,21 @@ async def cmd_evolve(user, target, slot: int):
     if slot < 1 or slot > len(deck): return await (target.followup.send if isinstance(target, discord.Interaction) else target.send)("Slot invalide.")
     card = deck[slot-1]; last = card.get("last_evolution", 0)
     
+    send_target = target.followup if isinstance(target, discord.Interaction) else target
+    
     if time.time() - last < EVOLUTION_COOLDOWN:
         rem = EVOLUTION_COOLDOWN - (time.time() - last); h = int(rem//3600); m = int((rem%3600)//60)
-        return await (target.followup.send if isinstance(target, discord.Interaction) else target.send)(f"Cooldown actif. Reviens dans {h}h{m}m.")
+        return await send_target.send(f"Cooldown actif. Reviens dans {h}h{m}m.")
     
     if user_decks.get(uid, {}).get("pokedollars", 0) < ECONOMY["EVOLVE_COST"]:
-        return await (target.followup.send if isinstance(target, discord.Interaction) else target.send)(f"❌ Évolution coûte **₽{ECONOMY['EVOLVE_COST']}**. Solde insuffisant. (`/solde`)")
+        return await send_target.send(f"❌ Évolution coûte **₽{ECONOMY['EVOLVE_COST']}**. Solde insuffisant. (`/solde`)")
     
-    if uid in rps_challenges: return await (target.followup.send if isinstance(target, discord.Interaction) else target.send)("Défi Eau-Feu-Plante déjà en cours.")
+    if uid in rps_challenges: return await send_target.send("Défi Eau-Feu-Plante déjà en cours.")
     
     add_pokedollars(uid, -ECONOMY["EVOLVE_COST"])
     rps_challenges[uid] = {"slot":slot, "wins":0, "losses":0, "target_wins":3, "max_rounds":5}
     msg = f"Défi Évolution pour **{card['name_fr']}** (Slot {slot}). Coût : **₽{ECONOMY['EVOLVE_COST']}**. Gagne 3/5 avec `/pfc [eau/feu/plante]`."
-    if isinstance(target, discord.Interaction): await target.followup.send(msg)
-    else: await target.send(msg)
+    await send_target.send(msg)
 
 @bot.command()
 async def pfc(ctx, choice: str): await cmd_pfc(ctx.author, ctx, choice)
@@ -899,7 +898,6 @@ async def cmd_pfc(user, target, choice: str):
         await send_target.send(msg)
 
 async def process_evolution_success(target, user_id, slot_number, current_card):
-    # Le début est géré par la fonction d'appel, ici on utilise followup pour slash
     send_target = target.followup if isinstance(target, discord.Interaction) else target
     
     next_id = None; url = current_card.get("evolution_chain_url")
@@ -969,7 +967,6 @@ async def cmd_deckduel(target, opponent):
     if not view.confirmed: await msg_obj.edit(content="Sélection annulée."); return
     challenger_cards = [deck_u[i] for i in view.selected]
     
-    # Étape 2: Défi et Acceptation
     card_list = "\n".join([f"{i+1}. {c['name_fr']} {get_rarity_emoji(c.get('rarity_level','Commun'))}" for i,c in enumerate(challenger_cards)])
     embed = discord.Embed(title="⚔️ Défi DeckDuel", description=f"{opponent.mention}, {user.display_name} te défie !\nCartes sélectionnées:\n{card_list}", color=discord.Color.red())
     
@@ -979,14 +976,12 @@ async def cmd_deckduel(target, opponent):
         if interaction.user.id != oid: await interaction.response.send_message("Pas pour vous.", ephemeral=True); return
         await interaction.response.edit_message(content=f"{opponent.display_name} accepte. Sélectionne tes 3 cartes :", embed=None, view=None)
         
-        # Étape 3: Sélection Opposant
         view2 = CardSelectionView(oid, deck_o, num_cards_required=3, timeout=90.0)
         msg_select_o = await interaction.channel.send(f"<@{oid}>, sélectionne 3 cartes :", view=view2)
         await view2.wait()
         if not view2.confirmed: await msg_select_o.edit(content="Sélection annulée par l'adversaire."); return
         defender_cards = [deck_o[i] for i in view2.selected]
         
-        # Étape 4: Début du duel
         manager = DeckDuelManager(ctx, uid, oid, challenger_cards, defender_cards)
         await interaction.channel.send(f"DeckDuel: <@{uid}> vs <@{oid}> ! Que le meilleur gagne !")
         await manager.send_battle_update()
