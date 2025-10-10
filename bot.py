@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (V7 - Code Moderne DÉFINITIF)
+# bot.py - PokéDeck Version Finale (V8 - Floutage OpenCV)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -9,7 +9,10 @@ import io
 import json
 import os
 import time
-from PIL import Image, ImageFilter
+# Suppression de l'import Pillow
+# Ajout de l'import CV2 (qui sera géré par numpy et io)
+import numpy as np
+import cv2
 from dotenv import load_dotenv
 
 # --- SETUP ET CONSTANTES ---
@@ -259,15 +262,40 @@ def get_rarity_emoji(name): return RARITIES.get(name, {}).get("emoji", "❓")
 def get_rarity_color(name): return RARITIES.get(name, {}).get("color", discord.Color.blue().value)
 def get_button_style_for_rarity(rarity_name): return {"Mythique": discord.ButtonStyle.secondary, "Légendaire": discord.ButtonStyle.primary, "Épique": discord.ButtonStyle.danger, "Rare": discord.ButtonStyle.success, "Commun": discord.ButtonStyle.secondary, "Chrome": discord.ButtonStyle.success}.get(rarity_name, discord.ButtonStyle.secondary)
 async def get_blurred_sprite_file(pokemon_id, is_shiny=False, blur_level=18):
+    """ Utilise OpenCV pour flouter l'image. Nécessite opencv-python-headless. """
+    url = f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{'shiny/' if is_shiny else ''}{pokemon_id}.png"
+    
     try:
-        url = f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{'shiny/' if is_shiny else ''}{pokemon_id}.png"
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
-                if resp.status != 200: return None; data = await resp.read()
-        img = Image.open(io.BytesIO(data)).convert("RGBA"); blurred = img.filter(ImageFilter.GaussianBlur(blur_level))
-        buf = io.BytesIO(); blurred.save(buf, format="PNG"); buf.seek(0)
-        return discord.File(fp=buf, filename="pokemon_inconnu.png")
-    except Exception: return None
+                if resp.status != 200: 
+                    print(f"Erreur HTTP lors du téléchargement du sprite: {resp.status}")
+                    return None
+                image_data = await resp.read()
+
+        # Conversion des données binaires en tableau numpy
+        nparr = np.frombuffer(image_data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
+        
+        if img is None:
+            print("Erreur: cv2 n'a pas pu décoder l'image.")
+            return None
+
+        # Appliquer le flou gaussien (le niveau de flou est le noyau de convolution)
+        # Assurez-vous que blur_level est impair pour OpenCV.
+        blur_kernel = blur_level * 2 + 1 if blur_level > 0 else 1
+        blurred = cv2.GaussianBlur(img, (blur_kernel, blur_kernel), 0)
+
+        # Encodage de l'image floutée en PNG pour l'envoi
+        _, buffer = cv2.imencode('.png', blurred)
+        
+        output_buffer = io.BytesIO(buffer)
+        return discord.File(output_buffer, filename="pokemon_inconnu.png")
+        
+    except Exception as e:
+        # C'est ici que l'erreur Pillow ou CV2 se produit souvent.
+        print(f"Échec de la création du sprite flou (CV2/Image): {e}")
+        return None 
 
 # ----------------- VUES (UI) -----------------
 
@@ -411,7 +439,7 @@ class StealSelectView(View):
 
     def make_cb(self, idx):
         async def cb(interaction: discord.Interaction):
-            if interaction.user.id != self.info.get("winner_id"): await interaction.response.send_message("Seul le gagnant peut voler.", ephemeral=True); return
+            if interaction.user.id != self.info.get("winner_id"): await interaction.response.send_message("Pas votre sélection.", ephemeral=True); return
             stolen = self.info["loser_cards_ko"][idx]; loser_deck_ud = user_decks.get(self.info["loser_id"], {})
             
             def remove_from_list(card_list, target_card):
@@ -1063,9 +1091,12 @@ async def cmd_devine(target):
         pick = random.choice(all_pokemon_list); card = await fetch_pokemon_details(pick["id"], is_shiny=False)
         if not card: return await send_target.send("Erreur lors de la récupération des détails du Pokémon. L'API est peut-être lente.")
         
+        # Floutage CV2
         file = await get_blurred_sprite_file(card["id"], is_shiny=False, blur_level=25)
-        # L'erreur de l'image floue est probable ici si Pillow ne fonctionne pas bien.
-        if not file: return await send_target.send("Erreur lors de la création de l'image floue (vérifiez Pillow).")
+        if not file: 
+            # Si le floutage échoue, on envoie l'image claire.
+            print("INFO: Échec du floutage, utilisation de l'image claire.")
+            file = discord.File(io.BytesIO(await aiohttp.request('GET', card['image_url']).read()), filename="pokemon_inconnu.png")
         
         random_move = random.choice(card.get("moves", [{"name": "Charge"}]))["name"]
         
@@ -1107,17 +1138,24 @@ async def cmd_indice(target):
     
     current_guess_game["hints"] += 1; hint_num = current_guess_game["hints"]; pokemon_id = current_guess_game["id"]
     blur_levels = {1: 20, 2: 15, 3: 10, 4: 5, 5: 0}
-    blur = blur_levels.get(hint_num, 0); file = await get_blurred_sprite_file(pokemon_id, is_shiny=False, blur_level=blur)
+    blur = blur_levels.get(hint_num, 0); 
     
-    hints_text = {1: f"**Génération :** Ce Pokémon est de la **Génération {current_guess_game.get('generation', '?')}**.", 2: f"**Type(s) :** Ce Pokémon est de type **{current_guess_game.get('types', '?')}**.", 3: f"**Attaque :** Ce Pokémon peut apprendre **{current_guess_game.get('random_move', '?')}**.", 4: "**Image défloutée !** L'image est plus nette.", 5: "**Image claire !** Dernière chance !"}
+    # NOUVEAU: Tente le floutage progressif (CV2)
+    file = await get_blurred_sprite_file(pokemon_id, is_shiny=False, blur_level=blur)
+    
+    hints_text = {1: f"**Génération :** Ce Pokémon est de la **Génération {current_guess_game.get('generation', '?')}**.", 2: f"**Type(s) :** Ce Pokémon est de type **{current_guess_game.get('types', '?')}**.", 3: f"**Attaque :** Ce Pokémon peut apprendre **{current_guess_game.get('random_move', '?')}**.", 4: "**Image défloutée !** L'image est plus nette." if file else "**Indice 4 (Textuel) :** Le floutage a échoué. Indice textuel donné.", 5: "**Image claire !** Dernière chance !"}
     msg = hints_text.get(hint_num, "")
     
     embed = discord.Embed(title=f"💡 Indice #{hint_num}/{MAX_HINTS}", description=msg, color=discord.Color.orange())
     embed.set_author(name=target.user.display_name if is_interaction else target.author.display_name, icon_url=target.user.display_avatar.url if is_interaction else target.author.display_avatar.url)
     
-    if file: embed.set_image(url="attachment://pokemon_inconnu.png")
-    
-    await send_target.send(embed=embed, file=file)
+    if file: 
+        embed.set_image(url="attachment://pokemon_inconnu.png")
+        await send_target.send(embed=embed, file=file)
+    else:
+        # Envoie l'image claire si le floutage a échoué
+        embed.set_image(url=current_guess_game["image_url"])
+        await send_target.send(embed=embed)
 
 @bot.command()
 async def tuprefere(ctx): await cmd_tuprefere(ctx)
