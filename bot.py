@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (Débogage Total V2)
+# bot.py - PokéDeck Version Finale (Débogage Total V3)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -272,6 +272,7 @@ class CardSelectionView(View):
         
 class DeckEditView(View):
     def __init__(self, ctx, collection):
+        # ctx peut être commands.Context ou discord.Interaction
         super().__init__(timeout=180.0); self.ctx = ctx; self.user_id = ctx.author.id if isinstance(ctx, commands.Context) else ctx.user.id; self.collection = collection
         active_deck = user_decks.get(self.user_id, {}).get("deck", [])
         self.current_deck_indices = []
@@ -321,7 +322,10 @@ class DeckEditView(View):
         ud = user_decks.get(self.user_id)
         if ud:
             ud["deck"] = [self.collection[i] for i in self.current_deck_indices]; update_best_card(self.user_id); save_user_decks()
-            await interaction.response.edit_message(content="✅ Deck mis à jour ! Utilisez `/deck` pour l'afficher.", embed=None, view=None); self.stop()
+            
+            # Utilise l'interaction de la vue pour répondre de manière éphémère
+            await interaction.response.edit_message(content="✅ Deck mis à jour ! Utilisez `/deck` pour l'afficher.", embed=None, view=None); 
+            self.stop()
         else: await interaction.response.send_message("Erreur de sauvegarde.", ephemeral=True)
 
 class EnergyAttackSelectView(View):
@@ -653,10 +657,14 @@ async def carte(ctx): await cmd_carte(ctx.author, ctx)
 async def slash_carte(interaction: discord.Interaction): await cmd_carte(interaction.user, interaction)
 
 async def cmd_carte(user, target):
-    if not all_pokemon_list: await target.response.send_message("Données en cours de chargement...") if isinstance(target, discord.Interaction) else target.send("Données en cours de chargement..."); return
+    if not all_pokemon_list: 
+        msg = "Données en cours de chargement..."
+        if isinstance(target, discord.Interaction): await target.response.send_message(msg); return
+        else: await target.send(msg); return
     
-    # Correction: Defer seulement si c'est un slash
-    if isinstance(target, discord.Interaction): await target.response.defer()
+    # Correction: Defer uniquement si c'est un slash et la première réponse
+    if isinstance(target, discord.Interaction) and not target.response.is_done(): 
+        await target.response.defer()
 
     is_shiny = random.random() < RARITIES["Chrome"]["chance"]; pid = random.choice(all_pokemon_list)["id"]; card = await fetch_pokemon_details(pid, is_shiny=is_shiny)
     if not card: return
@@ -762,6 +770,8 @@ async def cmd_deck(user, target, member):
     ud = user_decks.get(member_id, {"deck":[], "collection":[]}); deck = ud.get("deck", [])
     
     view = View(timeout=30)
+    
+    # Correction: pc_cb doit utiliser interaction.response.send_message
     async def pc_cb(interaction: discord.Interaction):
         if interaction.user.id != user.id: await interaction.response.send_message("Pas votre PC.", ephemeral=True); return
         pc_list = sorted(ud.get("collection", []), key=lambda c: (get_card_rarity_info(c).get("rank", 0), c.get("bst", 0)), reverse=True)
@@ -805,11 +815,10 @@ async def cmd_deck(user, target, member):
         else: embed.add_field(name=f"#{i+1}", value="(Vide)", inline=True)
             
     if member is None and len(ud.get("collection",[])) >= 6:
+        # Correction: La réponse au callback doit être une interaction response
         async def edit_cb(interaction: discord.Interaction):
             if interaction.user.id != user.id: await interaction.response.send_message("Pas votre deck.", ephemeral=True); return
-            # Passage de l'interaction à la vue pour qu'elle puisse fonctionner correctement
             view_edit = DeckEditView(interaction, ud["collection"]) 
-            # Réponse éphémère pour la vue de sélection afin de ne pas spammer le salon
             await interaction.response.send_message(f"**PC/Collection:** Sélectionnez 6 cartes pour votre deck actif (Actuel: {len(view_edit.current_deck_indices)}/6)", view=view_edit, ephemeral=True)
             
         edit_btn = Button(label="🔄 Modifier le deck (PC)", style=discord.ButtonStyle.primary); pc_btn = Button(label="💻 Voir PC (Collection)", style=discord.ButtonStyle.secondary)
