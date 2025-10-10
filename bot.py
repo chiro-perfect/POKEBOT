@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (V9 - Stabilité Maximale Forcée)
+# bot.py - PokéDeck Version Finale (V9 - Résolution Définitive des Vues)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -223,7 +223,7 @@ async def fetch_pokemon_details(pokemon_id, is_shiny=False):
             stats_dict = {s['stat']['name'].lower(): s['base_stat'] for s in pdata.get("stats", [])}
             stats_dict.setdefault("hp", stats_dict.get("hp", 50)); stats_dict.setdefault("attack", stats_dict.get("attack", 10)); stats_dict.setdefault("defense", stats_dict.get("defense", 10))
 
-            return {"id": pdata.get("id"), "name_en": pdata.get("name","").capitalize(), "name_fr": name_fr, "bst": bst, "rarity_level": "Chrome" if is_shiny else rarity_level, "image_url": image_url, "is_shiny": is_shiny, "types": types, "stats": stats_text, "stats_dict": stats_dict, "moves": moves, "evolution_chain_url": sdata.get("evolution_chain", {}).get("url"), "evolution_stage": 0, "evolution_limit": 2, "last_evolution": 0, "last_draw": 0, "generation": generation_roman}
+            return {"id": pdata.get("id"), "name_en": pdata.get("name","").capitalize(), "name_fr": name_fr, "bst": bst, "rarity_level": "Chrome" if is_shiny else rarity_level, "image_url": image_url, "is_shiny": is_shiny, "types": types, "stats": stats_text, "stats_dict": stats_dict, "moves": moves, "evolution_chain_url": sdata.get("evolution_chain", {}).get("url"), "evolution_stage": 0, "last_evolution": 0, "last_draw": 0, "generation": generation_roman}
 
     except asyncio.TimeoutError:
         print(f"Erreur: Timeout général lors de la requête pour l'ID {pokemon_id}.")
@@ -369,7 +369,8 @@ class CardSelectionView(View):
         super().__init__(timeout=timeout); self.user_id = user_id; self.deck = deck[:6]; self.num_cards_required = num_cards_required; self.selected = []; self.confirmed = False
         for i, card in enumerate(self.deck):
             label = f"#{i+1} {card.get('name_fr','?')[:18]}"; emoji = get_rarity_emoji(card.get("rarity_level","Commun"))
-            btn = Button(label=f"{emoji} {label}", style=discord.ButtonStyle.secondary, custom_id=f"cs_{i}", callback=self.make_cb(i)); self.add_item(btn)
+            # Correction: Utilisation de make_cb(i) pour assigner le callback
+            btn = Button(label=f"{emoji} {label}", style=discord.ButtonStyle.secondary, custom_id=f"cs_{i}"); btn.callback = self.make_cb(i); self.add_item(btn)
         confirm_btn = Button(label=f"✅ Confirmer (0/{self.num_cards_required})", style=discord.ButtonStyle.success, custom_id="cs_confirm", callback=self.confirm_cb); self.add_item(confirm_btn)
         self._update_confirm_button()
 
@@ -426,7 +427,7 @@ class DeckEditView(View):
             label = f"{card.get('name_fr', '?')[:12]} ({card.get('bst', '?')})"
             is_shiny_mark = "🌟" if card.get("is_shiny") else ""
             btn_style = discord.ButtonStyle.primary if is_in_deck else get_button_style_for_rarity(rarity)
-            btn = Button(label=f"{label}{is_shiny_mark}", style=btn_style, custom_id=f"deck_edit_{coll_idx}", emoji=emoji, row=i // 4, callback=self.make_card_cb(coll_idx)); self.add_item(btn)
+            btn = Button(label=f"{label}{is_shiny_mark}", style=btn_style, custom_id=f"deck_edit_{coll_idx}", emoji=emoji, row=i // 4); btn.callback = self.make_card_cb(coll_idx); self.add_item(btn)
 
         self.add_item(Button(label="⬅️ Précédent", custom_id="page_prev", disabled=self.page == 0, row=4, callback=self.page_prev_cb))
         self.add_item(Button(label=f"💾 Sauver ({len(self.current_deck_indices)}/6)", custom_id="deck_save", style=discord.ButtonStyle.success, disabled=len(self.current_deck_indices) != self.max_deck_size, row=4, callback=self.deck_save_cb))
@@ -1289,7 +1290,6 @@ async def cmd_tuprefere(target):
         # Création de l'image combinée avec les noms
         file = await combine_tuprefere_images(card1, card2)
 
-        # Correction: Passe le target (interaction/ctx) à la vue
         view = TuPrefereView(target, card1, card2)
         tu_prefere_games[channel_id] = view
         
