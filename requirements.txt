@@ -1,5 +1,5 @@
 # requirements.txt
-discord.py>=2.3.2
+discord.py>=2.6.4 # Maintenant compatible avec 3.13.x
 python-dotenv
 aiohttp
-Pillow==10.0.0  # Changement temporaire pour invalider le cache
+Pillow>=11.2.0   # Utilisera une version compatible avec Python 3.13
