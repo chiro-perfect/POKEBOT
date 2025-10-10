@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (Syntaxe Corrigée)
+# bot.py - PokéDeck Version Finale (Débogage Total)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -344,8 +344,10 @@ class EnergyAttackSelectView(View):
         async def cb(interaction: discord.Interaction):
             if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre tour.", ephemeral=True); return
             for item in self.children: item.disabled = True
-            try: await interaction.response.edit_message(view=self)
-            except: pass
+            try: 
+                await interaction.response.edit_message(view=self)
+            except: 
+                pass
             await self.manager.handle_move(self.user_id, idx); self.stop()
         return cb
     
@@ -434,7 +436,11 @@ class BigDeckView(View):
 
 class TuPrefereView(View):
     def __init__(self, ctx, card1, card2):
-        super().__init__(timeout=90.0); self.ctx = ctx; self.user_id = ctx.author.id; self.cards = [card1, card2]; self.current_selection = 0
+        # NOTE: ctx est soit commands.Context soit discord.Interaction
+        super().__init__(timeout=90.0); 
+        self.ctx = ctx
+        self.user_id = ctx.author.id if isinstance(ctx, commands.Context) else ctx.user.id
+        self.cards = [card1, card2]; self.current_selection = 0
         self.update_buttons()
 
     def update_buttons(self):
@@ -468,7 +474,10 @@ class TuPrefereView(View):
         chosen_card = self.cards[self.current_selection]; reward, added_to_deck = add_card_to_collection(self.user_id, chosen_card)
         msg = f"🎉 **{interaction.user.mention}** a choisi **{chosen_card['name_fr']}** ! Carte ajoutée à votre collection. **+ ₽{reward}**."
         if not added_to_deck: msg += f"\n(Deck actif plein.)"
-        await interaction.response.edit_message(content=msg, embed=None, view=None, attachments=[]); tu_prefere_games.pop(self.ctx.channel.id, None); self.stop()
+        await interaction.response.edit_message(content=msg, embed=None, view=None, attachments=[]); 
+        
+        channel_id = self.ctx.channel_id if isinstance(self.ctx, discord.Interaction) else self.ctx.channel.id
+        tu_prefere_games.pop(channel_id, None); self.stop()
 
     async def draw_new_card(self, current_card):
         while True:
@@ -484,7 +493,9 @@ class TuPrefereView(View):
         embed.set_image(url=chosen["image_url"]); embed.set_thumbnail(url=opponent["image_url"])
         return embed
 
-    async def on_timeout(self): tu_prefere_games.pop(self.ctx.channel.id, None);
+    async def on_timeout(self): 
+        channel_id = self.ctx.channel_id if isinstance(self.ctx, discord.Interaction) else self.ctx.channel.id
+        tu_prefere_games.pop(channel_id, None);
 
 # ---------------- DECK DUEL MANAGER (ÉNERGIE) ----------------
 
@@ -614,7 +625,6 @@ async def on_ready():
     load_user_decks()
     bot.loop.create_task(load_all_pokemon())
     
-    # Correction de l'erreur: Synchronisation via bot.tree
     await bot.tree.sync()
     print("✅ Commandes Slash synchronisées.")
 
@@ -735,6 +745,7 @@ async def cmd_bigdeck(user, target):
 @bot.command()
 async def deck(ctx, member: discord.Member = None): await cmd_deck(ctx.author, ctx, member)
 @bot.tree.command(name="deck", description="Affiche votre deck actif et permet de le modifier (PC).")
+@discord.app_commands.describe(member="Utilisateur dont vous voulez voir le deck.")
 async def slash_deck(interaction: discord.Interaction, member: discord.Member = None): await cmd_deck(interaction.user, interaction, member)
 
 async def cmd_deck(user, target, member):
@@ -841,7 +852,8 @@ async def pfc(ctx, choice: str): await cmd_pfc(ctx.author, ctx, choice)
     discord.app_commands.Choice(name="Plante", value="plante"),
 ])
 @discord.app_commands.describe(choice="Votre choix : Eau, Feu ou Plante.")
-async def slash_pfc(interaction: discord.Interaction, choice: str): await cmd_pfc(interaction.user, interaction, choice)
+async def slash_pfc(interaction: discord.Interaction, choice: str): 
+    await cmd_pfc(interaction.user, interaction, choice)
 
 async def cmd_pfc(user, target, choice: str):
     uid = user.id; choices_map = {"eau": "💧", "feu": "🔥", "plante": "🌿"}
@@ -977,7 +989,7 @@ async def slash_devine(interaction: discord.Interaction): await cmd_devine(inter
 
 async def cmd_devine(target):
     global current_guess_game
-    if not all_pokemon_list: return await (target.response.send_message if isinstance(target, discord.Interaction) else target.send)("Données non chargées.")
+    if not all_pokemon_list: await target.response.send_message("Données en cours de chargement...") if isinstance(target, discord.Interaction) else target.send("Données en cours de chargement..."); return
     if current_guess_game and current_guess_game.get("channel_id") == (target.channel_id if isinstance(target, discord.Interaction) else target.channel.id): 
         msg = "Un jeu est déjà en cours dans ce salon. `/jcp` pour abandonner."
         if isinstance(target, discord.Interaction): await target.response.send_message(msg, ephemeral=True)
@@ -1045,26 +1057,31 @@ async def tuprefere(ctx): await cmd_tuprefere(ctx)
 async def slash_tuprefere(interaction: discord.Interaction): await cmd_tuprefere(interaction)
 
 async def cmd_tuprefere(target):
-    channel_id = target.channel_id if isinstance(target, discord.Interaction) else target.channel.id
+    # DÉBOGAGE: Gestion correcte du contexte pour la vue
+    is_interaction = isinstance(target, discord.Interaction)
+    channel_id = target.channel_id if is_interaction else target.channel.id
+    
     if channel_id in tu_prefere_games: 
         msg = "Un jeu est déjà en cours dans ce salon."
-        if isinstance(target, discord.Interaction): await target.response.send_message(msg, ephemeral=True)
+        if is_interaction: await target.response.send_message(msg, ephemeral=True)
         else: await target.send(msg)
         return
     if len(all_pokemon_list) < 2: return
     
-    if isinstance(target, discord.Interaction): await target.response.defer()
+    if is_interaction: await target.response.defer()
     
     pids = random.sample(all_pokemon_list, 2)
     card1 = await fetch_pokemon_details(pids[0]["id"], is_shiny=False); card2 = await fetch_pokemon_details(pids[1]["id"], is_shiny=False)
     if not card1 or not card2: return
     
+    # Correction: La vue est initialisée avec l'objet de contexte/interaction correct
     view = TuPrefereView(target, card1, card2)
     tu_prefere_games[channel_id] = view
     
-    msg = f"**{target.user.mention if isinstance(target, discord.Interaction) else target.author.mention}**, choisis entre **{card1['name_fr']}** et **{card2['name_fr']}**."
+    user_mention = target.user.mention if is_interaction else target.author.mention
+    msg = f"**{user_mention}**, choisis entre **{card1['name_fr']}** et **{card2['name_fr']}**."
     
-    if isinstance(target, discord.Interaction): await target.followup.send(msg, embed=view.create_embed(), view=view)
+    if is_interaction: await target.followup.send(msg, embed=view.create_embed(), view=view)
     else: await target.send(msg, embed=view.create_embed(), view=view)
 
 
