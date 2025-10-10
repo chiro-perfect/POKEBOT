@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (V9 - Chiffres Romains Stricts)
+# bot.py - PokéDeck Version Finale (V9 - Stabilité Maximale Forcée)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -582,6 +582,7 @@ class TuPrefereView(View):
         self._add_buttons() # Utilise la méthode décorée
 
     def _add_buttons(self):
+        # Utilise la méthode décorée pour s'assurer que 'callback' n'est jamais un argument du constructeur
         # Bouton 1: Choisir c1
         @discord.ui.button(label=f"Choisir {self.cards[0]['name_fr']}", style=discord.ButtonStyle.primary, custom_id="tp_0", row=0)
         async def select_card_0(self, interaction: discord.Interaction, button: Button):
@@ -1245,7 +1246,10 @@ async def cmd_indice(target):
     # Tente le floutage progressif (CV2)
     file = await get_blurred_sprite_file(pokemon_id, is_shiny=False, blur_level=blur)
     
-    hints_text = {1: f"**Génération :** Ce Pokémon est de la **Génération {current_guess_game.get('generation', '?')}**.", 2: f"**Type(s) :** Ce Pokémon est de type **{current_guess_game.get('types', '?')}**.", 3: f"**Attaque :** Ce Pokémon peut apprendre **{current_guess_game.get('random_move', '?')}**.", 4: "**Image défloutée !** L'image est plus nette.", 5: "**Image claire !** Dernière chance !"}
+    # Correction: La génération est déjà stockée en ROMAIN STRING dans current_guess_game
+    gen_roman = current_guess_game.get('generation', '?')
+    
+    hints_text = {1: f"**Génération :** Ce Pokémon est de la **Génération {gen_roman}**.", 2: f"**Type(s) :** Ce Pokémon est de type **{current_guess_game.get('types', '?')}**.", 3: f"**Attaque :** Ce Pokémon peut apprendre **{current_guess_game.get('random_move', '?')}**.", 4: "**Image défloutée !** L'image est plus nette.", 5: "**Image claire !** Dernière chance !"}
     msg = hints_text.get(hint_num, "")
     
     embed = discord.Embed(title=f"💡 Indice #{hint_num}/{MAX_HINTS}", description=msg, color=discord.Color.orange())
@@ -1285,6 +1289,7 @@ async def cmd_tuprefere(target):
         # Création de l'image combinée avec les noms
         file = await combine_tuprefere_images(card1, card2)
 
+        # Correction: Passe le target (interaction/ctx) à la vue
         view = TuPrefereView(target, card1, card2)
         tu_prefere_games[channel_id] = view
         
