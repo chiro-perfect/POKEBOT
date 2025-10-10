@@ -367,9 +367,12 @@ async def combine_tuprefere_images(card1, card2):
 class CardSelectionView(View):
     def __init__(self, user_id, deck, num_cards_required=3, timeout=90.0):
         super().__init__(timeout=timeout); self.user_id = user_id; self.deck = deck[:6]; self.num_cards_required = num_cards_required; self.selected = []; self.confirmed = False
+        
         for i, card in enumerate(self.deck):
             label = f"#{i+1} {card.get('name_fr','?')[:18]}"; emoji = get_rarity_emoji(card.get("rarity_level","Commun"))
+            # Correction: Initialisation et assignation du callback séparément
             btn = Button(label=f"{emoji} {label}", style=discord.ButtonStyle.secondary, custom_id=f"cs_{i}"); btn.callback = self.make_cb(i); self.add_item(btn)
+            
         confirm_btn = Button(label=f"✅ Confirmer (0/{self.num_cards_required})", style=discord.ButtonStyle.success, custom_id="cs_confirm"); confirm_btn.callback = self.confirm_cb; self.add_item(confirm_btn)
         self._update_confirm_button()
 
@@ -474,9 +477,9 @@ class EnergyAttackSelectView(View):
             can_afford = all(self.player_energy.get(t, 0) >= c for t, c in m["cost"].items())
             dominant_energy = next(iter(m["cost"].keys()), "Normal")
             btn_style = ENERGY_TYPES.get(dominant_energy, ENERGY_TYPES["Normal"])["style"]
-            btn = Button(label=label, style=btn_style, custom_id=f"atk_{user_id}_{i}", disabled=not can_afford, row=i//2, callback=self.make_cb(i)); self.add_item(btn)
+            btn = Button(label=label, style=btn_style, custom_id=f"atk_{user_id}_{i}", disabled=not can_afford, row=i//2); btn.callback = self.make_cb(i); self.add_item(btn)
         
-        pass_btn = Button(label="🔄 Piocher / Passer (Gratuit)", style=discord.ButtonStyle.secondary, custom_id=f"pass_{user_id}", row=3, callback=self.pass_cb); self.add_item(pass_btn)
+        pass_btn = Button(label="🔄 Piocher / Passer (Gratuit)", style=discord.ButtonStyle.secondary, custom_id=f"pass_{user_id}", row=3); pass_btn.callback = self.pass_cb; self.add_item(pass_btn)
 
     def make_cb(self, idx):
         async def cb(interaction: discord.Interaction):
@@ -506,7 +509,7 @@ class StealSelectView(View):
         for i, c in enumerate(loser_cards):
             emoji = get_rarity_emoji(c.get("rarity_level","Commun")); label = f"{c.get('name_fr','?')[:20]}"
             btn_style = get_button_style_for_rarity(c.get("rarity_level", "Commun"))
-            btn = Button(label=f"{emoji} {label}", style=btn_style, custom_id=f"steal_{i}", callback=self.make_cb(i)); self.add_item(btn)
+            btn = Button(label=f"{emoji} {label}", style=btn_style, custom_id=f"steal_{i}"); btn.callback = self.make_cb(i); self.add_item(btn)
 
     def make_cb(self, idx):
         async def cb(interaction: discord.Interaction):
@@ -582,7 +585,6 @@ class TuPrefereView(View):
         self._add_buttons() # Utilise la méthode décorée
 
     def _add_buttons(self):
-        # Utilise la méthode décorée pour s'assurer que 'callback' n'est jamais un argument du constructeur
         # Bouton 1: Choisir c1
         @discord.ui.button(label=f"Choisir {self.cards[0]['name_fr']}", style=discord.ButtonStyle.primary, custom_id="tp_0", row=0)
         async def select_card_0(self, interaction: discord.Interaction, button: Button):
@@ -834,7 +836,7 @@ async def cmd_carte(user, target):
         
     reward, added_to_deck = add_card_to_collection(user.id, card)
     emoji = get_rarity_emoji(card.get("rarity_level","Commun")); embed = discord.Embed(title=f"🎴 {card['name_fr']} !", color=get_rarity_color(card.get("rarity_level","Commun")))
-    embed.set_thumbnail(url=card.get("image_url")); embed.add_field(name="Rareté", value=f"{emoji} {card.get("rarity_level")}", inline=True)
+    embed.set_thumbnail(url=card.get("image_url")); embed.add_field(name="Rareté", value=f"{emoji} {card.get('rarity_level')}", inline=True)
     embed.add_field(name="BST", value=str(card.get("bst","?")), inline=True); embed.add_field(name="Gain", value=f"**+ ₽{reward}**", inline=True)
     msg = f"**{card['name_fr']}** tiré. "; 
     if not added_to_deck: msg += f"\n(Ajouté à votre **PC/Collection**. Deck actif plein.)"
