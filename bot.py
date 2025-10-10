@@ -68,7 +68,7 @@ intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
-tree = discord.app_commands.CommandTree(bot) 
+# Suppression de 'tree = discord.app_commands.CommandTree(bot)' pour utiliser bot.tree par défaut.
 
 user_decks = {}
 all_pokemon_list = []
@@ -158,7 +158,7 @@ async def fetch_pokemon_moves(pokemon_id):
                 data = await resp.json()
             moves = []; candidates = data.get("moves", [])[:20]
             types = [t["type"]["name"].capitalize() for t in data.get("types", [])]; primary_type = types[0] if types else "Normal"
-            energy_map = {"Feu": "Feu", "Eau": "Eau", "Plante": "Plante", "Combat": "Combat", "Psy": "Psy", "Vol": "Normal", "Sol": "Combat", "Roche": "Combat", "Acier": "Normal", "Électrik": "Normal", "Glace": "Eau", "Dragon": "Normal", "Ténèbres": "Psy", "Fée": "Fée", "Poison": "Normal", "Insecte": "Plante"} # Corrigé Fée
+            energy_map = {"Feu": "Feu", "Eau": "Eau", "Plante": "Plante", "Combat": "Combat", "Psy": "Psy", "Vol": "Normal", "Sol": "Combat", "Roche": "Combat", "Acier": "Normal", "Électrik": "Normal", "Glace": "Eau", "Dragon": "Normal", "Ténèbres": "Psy", "Fée": "Fée", "Poison": "Normal", "Insecte": "Plante"} 
             primary_energy = energy_map.get(primary_type, "Normal")
             
             for m in random.sample(candidates, min(len(candidates), 8)):
@@ -241,8 +241,8 @@ class CardSelectionView(View):
         super().__init__(timeout=timeout); self.user_id = user_id; self.deck = deck[:6]; self.num_cards_required = num_cards_required; self.selected = []; self.confirmed = False
         for i, card in enumerate(self.deck):
             label = f"#{i+1} {card.get('name_fr','?')[:18]}"; emoji = get_rarity_emoji(card.get("rarity_level","Commun"))
-            btn = Button(label=f"{emoji} {label}", style=discord.ButtonStyle.secondary, custom_id=f"cs_{i}"); btn.callback = self.make_cb(i); self.add_item(btn)
-        confirm_btn = Button(label=f"✅ Confirmer (0/{self.num_cards_required})", style=discord.ButtonStyle.success, custom_id="cs_confirm", disabled=True); confirm_btn.callback = self.confirm_cb; self.add_item(confirm_btn)
+            btn = Button(label=f"{emoji} {label}", style=discord.ButtonStyle.secondary, custom_id=f"cs_{i}", callback=self.make_cb(i)); self.add_item(btn)
+        confirm_btn = Button(label=f"✅ Confirmer (0/{self.num_cards_required})", style=discord.ButtonStyle.success, custom_id="cs_confirm", disabled=True, callback=self.confirm_cb); self.add_item(confirm_btn)
 
     def make_cb(self, idx):
         async def cb(interaction: discord.Interaction):
@@ -353,7 +353,7 @@ class EnergyAttackSelectView(View):
         if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre tour.", ephemeral=True); return
         for item in self.children: item.disabled = True
         try: await interaction.response.edit_message(view=self)
-        except: pass
+            except: pass
         await self.manager.handle_move(self.user_id, -1, is_pass=True); self.stop()
 
     async def on_timeout(self): await self.manager.handle_timeout(self.user_id)
@@ -612,14 +612,15 @@ async def on_ready():
     load_user_decks()
     bot.loop.create_task(load_all_pokemon())
     
-    await tree.sync()
+    # Correction de l'erreur: Synchronisation via bot.tree
+    await bot.tree.sync()
     print("✅ Commandes Slash synchronisées.")
 
 @bot.command(name="help", aliases=["aide","pokehelp"])
 async def pokehelp(ctx):
     await send_help_embed(ctx)
 
-@tree.command(name="help", description="Affiche la liste des commandes et l'aide.")
+@bot.tree.command(name="help", description="Affiche la liste des commandes et l'aide.")
 async def slash_help(interaction: discord.Interaction):
     await send_help_embed(interaction)
 
@@ -636,7 +637,7 @@ async def send_help_embed(target):
 
 @bot.command()
 async def carte(ctx): await cmd_carte(ctx.author, ctx)
-@tree.command(name="carte", description="Tire une carte Pokémon aléatoire.")
+@bot.tree.command(name="carte", description="Tire une carte Pokémon aléatoire.")
 async def slash_carte(interaction: discord.Interaction): await cmd_carte(interaction.user, interaction)
 
 async def cmd_carte(user, target):
@@ -654,7 +655,7 @@ async def cmd_carte(user, target):
 
 @bot.command()
 async def booster(ctx): await cmd_booster(ctx.author, ctx)
-@tree.command(name="booster", description="Pioche 5 cartes Pokémon (coût ₽).")
+@bot.tree.command(name="booster", description="Pioche 5 cartes Pokémon (coût ₽).")
 async def slash_booster(interaction: discord.Interaction): await cmd_booster(interaction.user, interaction)
 
 async def cmd_booster(user, target):
@@ -687,7 +688,7 @@ async def cmd_booster(user, target):
 
 @bot.command()
 async def solde(ctx): await cmd_solde(ctx.author, ctx)
-@tree.command(name="solde", description="Affiche votre solde de Pokédollars (₽).")
+@bot.tree.command(name="solde", description="Affiche votre solde de Pokédollars (₽).")
 async def slash_solde(interaction: discord.Interaction): await cmd_solde(interaction.user, interaction)
 
 async def cmd_solde(user, target):
@@ -699,7 +700,7 @@ async def cmd_solde(user, target):
 
 @bot.command()
 async def bigdeck(ctx): await cmd_bigdeck(ctx.author, ctx)
-@tree.command(name="bigdeck", description="Tirage quotidien avec rerolls.")
+@bot.tree.command(name="bigdeck", description="Tirage quotidien avec rerolls.")
 async def slash_bigdeck(interaction: discord.Interaction): await cmd_bigdeck(interaction.user, interaction)
 
 async def cmd_bigdeck(user, target):
@@ -731,7 +732,7 @@ async def cmd_bigdeck(user, target):
 
 @bot.command()
 async def deck(ctx, member: discord.Member = None): await cmd_deck(ctx.author, ctx, member)
-@tree.command(name="deck", description="Affiche votre deck actif et permet de le modifier (PC).")
+@bot.tree.command(name="deck", description="Affiche votre deck actif et permet de le modifier (PC).")
 async def slash_deck(interaction: discord.Interaction, member: discord.Member = None): await cmd_deck(interaction.user, interaction, member)
 
 async def cmd_deck(user, target, member):
@@ -804,7 +805,7 @@ async def cmd_deck(user, target, member):
 
 @bot.command()
 async def evolve(ctx, slot: int): await cmd_evolve(ctx.author, ctx, slot)
-@tree.command(name="evolve", description="Lance un défi Eau/Feu/Plante pour faire évoluer un Pokémon.")
+@bot.tree.command(name="evolve", description="Lance un défi Eau/Feu/Plante pour faire évoluer un Pokémon.")
 @discord.app_commands.describe(slot="Numéro du slot (1-6) du Pokémon à faire évoluer.")
 async def slash_evolve(interaction: discord.Interaction, slot: int): await cmd_evolve(interaction.user, interaction, slot)
 
@@ -831,7 +832,7 @@ async def cmd_evolve(user, target, slot: int):
 
 @bot.command()
 async def pfc(ctx, choice: str): await cmd_pfc(ctx.author, ctx, choice)
-@tree.command(name="pfc", description="Joue au défi Eau/Feu/Plante pour l'évolution.")
+@bot.tree.command(name="pfc", description="Joue au défi Eau/Feu/Plante pour l'évolution.")
 @discord.app_commands.choices(choice=[
     discord.app_commands.Choice(name="Eau", value="eau"),
     discord.app_commands.Choice(name="Feu", value="feu"),
@@ -900,7 +901,7 @@ async def process_evolution_success(target, user_id, slot_number, current_card):
 
 @bot.command()
 async def deckduel(ctx, opponent: discord.Member): await cmd_deckduel(ctx, opponent)
-@tree.command(name="deckduel", description="Défie un utilisateur dans un duel stratégique (3 cartes, Énergie).")
+@bot.tree.command(name="deckduel", description="Défie un utilisateur dans un duel stratégique (3 cartes, Énergie).")
 @discord.app_commands.describe(opponent="L'utilisateur à défier.")
 async def slash_deckduel(interaction: discord.Interaction, opponent: discord.Member): await cmd_deckduel(interaction, opponent)
 
@@ -927,7 +928,6 @@ async def cmd_deckduel(target, opponent):
         else: await target.send(msg)
         return
     
-    # Étape 1: Sélection Challenger
     if isinstance(target, discord.Interaction): await target.response.defer()
     
     view = CardSelectionView(uid, deck_u, num_cards_required=3, timeout=90.0)
@@ -939,7 +939,6 @@ async def cmd_deckduel(target, opponent):
     if not view.confirmed: await msg_obj.edit(content="Sélection annulée."); return
     challenger_cards = [deck_u[i] for i in view.selected]
     
-    # Étape 2: Défi et Acceptation
     card_list = "\n".join([f"{i+1}. {c['name_fr']} {get_rarity_emoji(c.get('rarity_level','Commun'))}" for i,c in enumerate(challenger_cards)])
     embed = discord.Embed(title="⚔️ Défi DeckDuel", description=f"{opponent.mention}, {user.display_name} te défie !\nCartes sélectionnées:\n{card_list}", color=discord.Color.red())
     
@@ -949,14 +948,12 @@ async def cmd_deckduel(target, opponent):
         if interaction.user.id != oid: await interaction.response.send_message("Pas pour vous.", ephemeral=True); return
         await interaction.response.edit_message(content=f"{opponent.display_name} accepte. Sélectionne tes 3 cartes :", embed=None, view=None)
         
-        # Étape 3: Sélection Opposant
         view2 = CardSelectionView(oid, deck_o, num_cards_required=3, timeout=90.0)
         msg_select_o = await interaction.channel.send(f"<@{oid}>, sélectionne 3 cartes :", view=view2)
         await view2.wait()
         if not view2.confirmed: await msg_select_o.edit(content="Sélection annulée par l'adversaire."); return
         defender_cards = [deck_o[i] for i in view2.selected]
         
-        # Étape 4: Début du duel
         manager = DeckDuelManager(ctx, uid, oid, challenger_cards, defender_cards)
         await interaction.channel.send(f"DeckDuel: <@{uid}> vs <@{oid}> ! Que le meilleur gagne !")
         await manager.send_battle_update()
@@ -973,7 +970,7 @@ async def cmd_deckduel(target, opponent):
 
 @bot.command()
 async def devine(ctx): await cmd_devine(ctx)
-@tree.command(name="devine", description="Quel est ce Pokémon ? Défloutage progressif.")
+@bot.tree.command(name="devine", description="Quel est ce Pokémon ? Défloutage progressif.")
 async def slash_devine(interaction: discord.Interaction): await cmd_devine(interaction)
 
 async def cmd_devine(target):
@@ -1006,7 +1003,7 @@ async def cmd_devine(target):
 
 @bot.command()
 async def indice(ctx): await cmd_indice(ctx)
-@tree.command(name="indice", description="Donne un indice pour le jeu Devine Pokémon.")
+@bot.tree.command(name="indice", description="Donne un indice pour le jeu Devine Pokémon.")
 async def slash_indice(interaction: discord.Interaction): await cmd_indice(interaction)
 
 async def cmd_indice(target):
@@ -1042,7 +1039,7 @@ async def cmd_indice(target):
 
 @bot.command()
 async def tuprefere(ctx): await cmd_tuprefere(ctx)
-@tree.command(name="tuprefere", description="Choisis entre deux Pokémon (gagne la carte choisie).")
+@bot.tree.command(name="tuprefere", description="Choisis entre deux Pokémon (gagne la carte choisie).")
 async def slash_tuprefere(interaction: discord.Interaction): await cmd_tuprefere(interaction)
 
 async def cmd_tuprefere(target):
