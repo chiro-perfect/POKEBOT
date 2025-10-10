@@ -174,7 +174,7 @@ async def fetch_pokemon_moves(pokemon_id):
                 except: name_fr = name_en
                         
                 power = random.choice([30, 50, 70, 90]); cost = random.randint(1, 3); energy_cost = {primary_energy: cost}
-                moves.append({"name": name_fr, "power": power, "cost": energy_energy_cost})
+                moves.append({"name": name_fr, "power": power, "cost": energy_cost})
             if not moves: moves = [{"name":"Charge","power":50, "cost": {"Normal": 1}}]
             return moves[:4]
     except Exception as e:
@@ -367,10 +367,9 @@ async def combine_tuprefere_images(card1, card2):
 class CardSelectionView(View):
     def __init__(self, user_id, deck, num_cards_required=3, timeout=90.0):
         super().__init__(timeout=timeout); self.user_id = user_id; self.deck = deck[:6]; self.num_cards_required = num_cards_required; self.selected = []; self.confirmed = False
-        
         for i, card in enumerate(self.deck):
             label = f"#{i+1} {card.get('name_fr','?')[:18]}"; emoji = get_rarity_emoji(card.get("rarity_level","Commun"))
-            # Correction: Initialisation et assignation du callback séparément
+            # Correction: Utilisation de make_cb(i) pour assigner le callback
             btn = Button(label=f"{emoji} {label}", style=discord.ButtonStyle.secondary, custom_id=f"cs_{i}"); btn.callback = self.make_cb(i); self.add_item(btn)
             
         confirm_btn = Button(label=f"✅ Confirmer (0/{self.num_cards_required})", style=discord.ButtonStyle.success, custom_id="cs_confirm"); confirm_btn.callback = self.confirm_cb; self.add_item(confirm_btn)
@@ -384,7 +383,7 @@ class CardSelectionView(View):
 
     def make_cb(self, idx):
         async def cb(interaction: discord.Interaction):
-            if interaction.user.id != self.user_id: await interaction.response.send_message("Ce n'est pas votre sélection.", ephemeral=True); return
+            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre sélection.", ephemeral=True); return
             if idx in self.selected: self.selected.remove(idx)
             else:
                 if len(self.selected) >= self.num_cards_required: await interaction.response.send_message(f"Max {self.num_cards_required} cartes.", ephemeral=True); return
@@ -540,10 +539,9 @@ class StealSelectView(View):
 class BigDeckView(View):
     def __init__(self, user_id, session):
         super().__init__(timeout=120.0); self.user_id = user_id; self.session = session
-        reroll_btn = Button(label=f"🔄 Reroll ({session['attempts']})", style=discord.ButtonStyle.secondary, callback=self.reroll_cb)
-        keep_btn = Button(label="✅ Garder", style=discord.ButtonStyle.success, callback=self.keep_cb)
-        cancel_btn = Button(label="❌ Annuler", style=discord.ButtonStyle.danger, callback=self.cancel_cb)
-        self.add_item(reroll_btn); self.add_item(keep_btn); self.add_item(cancel_btn)
+        reroll_btn = Button(label=f"🔄 Reroll ({session['attempts']})", style=discord.ButtonStyle.secondary); reroll_btn.callback = self.reroll_cb; self.add_item(reroll_btn)
+        keep_btn = Button(label="✅ Garder", style=discord.ButtonStyle.success); keep_btn.callback = self.keep_cb; self.add_item(keep_btn)
+        cancel_btn = Button(label="❌ Annuler", style=discord.ButtonStyle.danger); cancel_btn.callback = self.cancel_cb; self.add_item(cancel_btn)
 
     async def reroll_cb(self, interaction: discord.Interaction):
         if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre session.", ephemeral=True); return
@@ -585,50 +583,56 @@ class TuPrefereView(View):
         self._add_buttons() # Utilise la méthode décorée
 
     def _add_buttons(self):
-        # Utilise la méthode décorée pour s'assurer que 'callback' n'est jamais un argument du constructeur
         # Bouton 1: Choisir c1
-        @discord.ui.button(label=f"Choisir {self.cards[0]['name_fr']}", style=discord.ButtonStyle.primary, custom_id="tp_0", row=0)
-        async def select_card_0(self, interaction: discord.Interaction, button: Button):
-            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
-            self.current_selection = 0
-            self.update_buttons()
-            embed = self.create_embed()
-            # Envoie la nouvelle version de l'image combinée avec la réponse d'édition
-            file = await combine_tuprefere_images(self.cards[0], self.cards[1])
-            await interaction.response.edit_message(embed=embed, view=self, attachments=[file])
+        btn1 = Button(label=f"Choisir {self.cards[0]['name_fr']}", style=discord.ButtonStyle.primary, custom_id="tp_0", row=0)
+        btn1.callback = self.select_card_0
+        self.add_item(btn1)
 
         # Bouton 2: Choisir c2
-        @discord.ui.button(label=f"Choisir {self.cards[1]['name_fr']}", style=discord.ButtonStyle.secondary, custom_id="tp_1", row=0)
-        async def select_card_1(self, interaction: discord.Interaction, button: Button):
-            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
-            self.current_selection = 1
-            self.update_buttons()
-            embed = self.create_embed()
-            # Envoie la nouvelle version de l'image combinée avec la réponse d'édition
-            file = await combine_tuprefere_images(self.cards[0], self.cards[1])
-            await interaction.response.edit_message(embed=embed, view=self, attachments=[file])
-            
-        @discord.ui.button(label=f"🔄 Changer l'Autre", style=discord.ButtonStyle.secondary, row=1, custom_id="tp_change")
-        async def change_cb(self, interaction: discord.Interaction, button: Button):
-            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
-            await interaction.response.defer()
-            card_to_keep = self.cards[self.current_selection]; new_card = await self.draw_new_card(card_to_keep); self.cards[1-self.current_selection] = new_card
-            self.update_buttons(); embed = self.create_embed()
-            
-            # Recrée le fichier combiné
-            file = await combine_tuprefere_images(self.cards[0], self.cards[1])
-            await interaction.edit_original_response(embed=embed, view=self, attachments=[file])
+        btn2 = Button(label=f"Choisir {self.cards[1]['name_fr']}", style=discord.ButtonStyle.secondary, custom_id="tp_1", row=0)
+        btn2.callback = self.select_card_1
+        self.add_item(btn2)
+        
+        # Boutons de contrôle
+        change_btn = Button(label=f"🔄 Changer l'Autre", style=discord.ButtonStyle.secondary, row=1, custom_id="tp_change"); change_btn.callback = self.change_cb
+        finish_btn = Button(label="✅ Garder et Finir", style=discord.ButtonStyle.success, row=1, custom_id="tp_finish"); finish_btn.callback = self.finish_cb
+        self.add_item(change_btn)
+        self.add_item(finish_btn)
 
-        @discord.ui.button(label="✅ Garder et Finir", style=discord.ButtonStyle.success, row=1, custom_id="tp_finish")
-        async def finish_cb(self, interaction: discord.Interaction, button: Button):
-            if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
-            chosen_card = self.cards[self.current_selection]; reward, added_to_deck = add_card_to_collection(self.user_id, chosen_card)
-            msg = f"🎉 **{interaction.user.mention}** a choisi **{chosen_card['name_fr']}** ! Carte ajoutée à votre collection. **+ ₽{reward}**."
-            if not added_to_deck: msg += f"\n(Deck actif plein.)"
-            await interaction.response.edit_message(content=msg, embed=None, view=None, attachments=[])
-            
-            channel_id = self.ctx.channel_id if isinstance(self.ctx, discord.Interaction) else self.ctx.channel.id
-            tu_prefere_games.pop(channel_id, None); self.stop()
+    async def select_card_0(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
+        self.current_selection = 0
+        self.update_buttons()
+        embed = self.create_embed()
+        file = await combine_tuprefere_images(self.cards[0], self.cards[1])
+        await interaction.response.edit_message(embed=embed, view=self, attachments=[file])
+
+    async def select_card_1(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
+        self.current_selection = 1
+        self.update_buttons()
+        embed = self.create_embed()
+        file = await combine_tuprefere_images(self.cards[0], self.cards[1])
+        await interaction.response.edit_message(embed=embed, view=self, attachments=[file])
+        
+    async def change_cb(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
+        await interaction.response.defer()
+        card_to_keep = self.cards[self.current_selection]; new_card = await self.draw_new_card(card_to_keep); self.cards[1-self.current_selection] = new_card
+        self.update_buttons(); embed = self.create_embed()
+        
+        file = await combine_tuprefere_images(self.cards[0], self.cards[1])
+        await interaction.edit_original_response(embed=embed, view=self, attachments=[file])
+
+    async def finish_cb(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id: await interaction.response.send_message("Pas votre jeu.", ephemeral=True); return
+        chosen_card = self.cards[self.current_selection]; reward, added_to_deck = add_card_to_collection(self.user_id, chosen_card)
+        msg = f"🎉 **{interaction.user.mention}** a choisi **{chosen_card['name_fr']}** ! Carte ajoutée à votre collection. **+ ₽{reward}**."
+        if not added_to_deck: msg += f"\n(Deck actif plein.)"
+        await interaction.response.edit_message(content=msg, embed=None, view=None, attachments=[])
+        
+        channel_id = self.ctx.channel_id if isinstance(self.ctx, discord.Interaction) else self.ctx.channel.id
+        tu_prefere_games.pop(channel_id, None); self.stop()
 
     def update_buttons(self):
         # Met à jour les labels et styles des boutons après une sélection/changement
