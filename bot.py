@@ -174,7 +174,7 @@ async def fetch_pokemon_moves(pokemon_id):
                 except: name_fr = name_en
                         
                 power = random.choice([30, 50, 70, 90]); cost = random.randint(1, 3); energy_cost = {primary_energy: cost}
-                moves.append({"name": name_fr, "power": power, "cost": energy_cost})
+                moves.append({"name": name_fr, "power": power, "cost": energy_energy_cost})
             if not moves: moves = [{"name":"Charge","power":50, "cost": {"Normal": 1}}]
             return moves[:4]
     except Exception as e:
@@ -431,9 +431,9 @@ class DeckEditView(View):
             btn_style = discord.ButtonStyle.primary if is_in_deck else get_button_style_for_rarity(rarity)
             btn = Button(label=f"{label}{is_shiny_mark}", style=btn_style, custom_id=f"deck_edit_{coll_idx}", emoji=emoji, row=i // 4); btn.callback = self.make_card_cb(coll_idx); self.add_item(btn)
 
-        self.add_item(Button(label="⬅️ Précédent", custom_id="page_prev", disabled=self.page == 0, row=4, callback=self.page_prev_cb))
-        self.add_item(Button(label=f"💾 Sauver ({len(self.current_deck_indices)}/6)", custom_id="deck_save", style=discord.ButtonStyle.success, disabled=len(self.current_deck_indices) != self.max_deck_size, row=4, callback=self.deck_save_cb))
-        self.add_item(Button(label="Suivant ➡️", custom_id="page_next", disabled=end_index >= len(self.collection), row=4, callback=self.page_next_cb))
+        self.add_item(Button(label="⬅️ Précédent", custom_id="page_prev", disabled=self.page == 0, row=4)); self.children[-1].callback = self.page_prev_cb
+        self.add_item(Button(label=f"💾 Sauver ({len(self.current_deck_indices)}/6)", custom_id="deck_save", style=discord.ButtonStyle.success, disabled=len(self.current_deck_indices) != self.max_deck_size, row=4)); self.children[-1].callback = self.deck_save_cb
+        self.add_item(Button(label="Suivant ➡️", custom_id="page_next", disabled=end_index >= len(self.collection), row=4)); self.children[-1].callback = self.page_next_cb
 
     def make_card_cb(self, coll_idx):
         async def cb(interaction: discord.Interaction):
@@ -585,6 +585,7 @@ class TuPrefereView(View):
         self._add_buttons() # Utilise la méthode décorée
 
     def _add_buttons(self):
+        # Utilise la méthode décorée pour s'assurer que 'callback' n'est jamais un argument du constructeur
         # Bouton 1: Choisir c1
         @discord.ui.button(label=f"Choisir {self.cards[0]['name_fr']}", style=discord.ButtonStyle.primary, custom_id="tp_0", row=0)
         async def select_card_0(self, interaction: discord.Interaction, button: Button):
