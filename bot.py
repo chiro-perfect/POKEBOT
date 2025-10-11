@@ -1,4 +1,4 @@
-# bot.py - PokéDeck Version Finale (V11 - Stabilité UI Absolue)
+# bot.py - PokéDeck Version Finale (V12 - Stabilité UI Absolue)
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select
@@ -309,6 +309,7 @@ async def combine_tuprefere_images(card1, card2):
     async with aiohttp.ClientSession() as session:
         # Correction de l'erreur '_BaseRequestContextManager' object has no attribute 'read'
         responses = await asyncio.gather(*(session.get(url) for url in urls))
+        # Correction: await la lecture du contenu de chaque réponse
         image_data = await asyncio.gather(*(response.read() for response in responses))
 
     images = []
@@ -553,7 +554,7 @@ class BigDeckView(View):
         self.session["current_card"] = card; self.session["attempts"] -= 1
         file = await get_blurred_sprite_file(card["id"], is_shiny=card.get("is_shiny",False), blur_level=10)
         rarity_emoji = get_rarity_emoji(card.get("rarity_level","Commun"))
-        embed = discord.Embed(title="✨ BigDeck (reroll) ✨", description=f"BST: {card.get('bst','?')} — {rarity_emoji} {card.get('rarity_level','?')} - BST: {card.get('bst','?')}\nRerolls: {self.session['attempts']}", color=get_rarity_color(card.get("rarity_level","Commun")))
+        embed = discord.Embed(title="✨ BigDeck (reroll) ✨", description=f"BST: {card.get('bst','?')} — {rarity_info.get('emoji')} {rarity_info.get('rarity_level')}\nRerolls: {self.session['attempts']}", color=get_rarity_color(card.get("rarity_level","Commun")))
         embed.set_image(url="attachment://pokemon_inconnu.png")
         try: await interaction.response.edit_message(embed=embed, attachments=[file] if file else [], view=self)
         except: await interaction.response.send_message(embed=embed, file=file, view=self)
