@@ -1,0 +1,18 @@
+# render.yaml
+
+services:
+  - type: web
+    name: pokebot-worker
+    env: python
+    # Réglez le port même si le bot ne l'utilise pas, car c'est requis pour un service 'web' sur Render.
+    port: 10000 
+    
+    # Commande pour installer les dépendances (y compris discord.py, opencv-python-headless)
+    buildCommand: pip install -r requirements.txt
+    
+    # Commande pour démarrer le bot (équivalent de votre Procfile)
+    startCommand: python bot.py
+    
+    # Le plan gratuit se met en pause après 15 minutes d'inactivité.
+    # Pour garantir le 24/7, vous devez ajouter le service de ping (voir les étapes ci-dessous).
+    plan: free
