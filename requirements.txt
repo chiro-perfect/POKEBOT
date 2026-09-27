@@ -4,3 +4,4 @@ python-dotenv
 aiohttp
 opencv-python-headless 
 numpy
+flask
