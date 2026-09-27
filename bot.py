@@ -1,5 +1,6 @@
 # bot.py - PokéDeck Version Finale (V12 - Stabilité UI Absolue)
 import discord
+import keep_alive
 from discord.ext import commands
 from discord.ui import Button, View, Select
 import asyncio
@@ -1340,5 +1341,6 @@ if __name__ == "__main__":
     if not TOKEN:
         print("❌ Erreur : DISCORD_BOT_TOKEN introuvable dans .env")
         raise SystemExit("Token manquant")
-        
+
+    keep_alive.keep_alive()
     bot.run(TOKEN)
